@@ -1,7 +1,6 @@
 ---
-title: "Loss of TET2 in human hematopoietic stem cells alters the development and function of neutrophils"
+title: ["Loss of TET2 in human hematopoietic stem cells alters the development and function of neutrophils"](https://doi.org/10.1016/j.stem.2023.05.004)
 collection: publications
-permalink: /publication/2010-10-01-paper-title-number-2
 excerpt: 'This paper is about the number 1. The number 2 is left for future work.'
 date: 2023-06-01
 venue: 'Cell Stem Cell'
