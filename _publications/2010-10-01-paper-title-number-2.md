@@ -1,12 +1,10 @@
 ---
-title: "Paper Title Number 2"
+title: "Loss of TET2 in human hematopoietic stem cells alters the development and function of neutrophils"
 collection: publications
 permalink: /publication/2010-10-01-paper-title-number-2
-excerpt: 'This paper is about the number 2. The number 3 is left for future work.'
-date: 2010-10-01
-venue: 'Journal 1'
-paperurl: 'http://academicpages.github.io/files/paper2.pdf'
-citation: 'Your Name, You. (2010). &quot;Paper Title Number 2.&quot; <i>Journal 1</i>. 1(2).'
+excerpt: 'This paper is about the number 1. The number 2 is left for future work.'
+date: 2023-06-01
+venue: 'Cell Stem Cell'
+paperurl: https://doi.org/10.1016/j.stem.2023.05.004
+citation: 'Huerga Encabo, H., Aramburu, I. V., Garcia-Albornoz, M., Piganeau, M., Wood, H., Song, A., Ferrelli, A., Sharma, A., Minutti, C. M., Domart, M. C., Papazoglou, D., Gurashi, K., Llorian Sopena, M., Goldstone, R., Fallesen, T., Wang, Q., Ariza-McNaughton, L., Wiseman, D. H., Batta, K., Gupta, R., … Bonnet, D. (2023). Loss of TET2 in human hematopoietic stem cells alters the development and function of neutrophils. Cell stem cell, 30(6), 781–799.e9.'
 ---
-
-The contents above will be part of a list of publications, if the user clicks the link for the publication than the contents of section will be rendered as a full page, allowing you to provide more information about the paper for the reader. When publications are displayed as a single page, the contents of the above "citation" field will automatically be included below this section in a smaller font.
