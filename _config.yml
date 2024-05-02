@@ -8,9 +8,9 @@
 
 # Basic Site Settings
 locale                   : "en-UK"
-title                    : "Dr. Your Name / Site Title"
+title                    : "Homepage"
 title_separator          : "-"
-name                     : &name "Kristian Gurashi"
+name                     : &name "Dr. Kristian Gurashi"
 description              : &description "personal description"
 url                      : https://espressokris.github.io/Portfolio # the base hostname & protocol for your site e.g. "https://mmistakes.github.io"
 baseurl                  : "" # the subpath of your site, e.g. "/blog"
@@ -22,7 +22,7 @@ repository               : "EspressoKris/Portfolio"
 author:
   # Biographic information
   avatar           : "profile.png"
-  name             : "Your Sidebar Name"
+  name             : "Dr. Kristian Gurashi"
   pronouns         : # example: "she/her"  
   bio              : "Computational biologist (Postdoctoral Researcher) and former wet-lab scientist with a focus in leukaemia stem cell biology and translational oncology."
   location         : "Oxford, United Kingdom"
