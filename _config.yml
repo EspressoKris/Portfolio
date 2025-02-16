@@ -21,7 +21,7 @@ repository               : "EspressoKris/Portfolio"
 #               Additional customization can be done by editing /_includes/author-profile.html
 author:
   # Biographic information
-  avatar           : "profile.png"
+  avatar           : "Profile_picture.jpeg"
   name             : "Dr. Kristian Gurashi"
   pronouns         : # example: "she/her"  
   bio              : "Postdoctoral Computational biologist - Single-Cell Specialist, Computational Biologist & Haemato-Oncology Scientist"
