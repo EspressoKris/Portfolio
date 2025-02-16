@@ -19,3 +19,7 @@ citation: 'Huerga Encabo, H., Aramburu, I. V., Garcia-Albornoz, M., Piganeau, M.
     • TET2 mutations in humans correlate with the presence of low-granule neutrophils
   </p>
 </div> 
+
+## Summary
+
+Somatic mutations commonly occur in hematopoietic stem cells (HSCs). Some mutant clones outgrow through clonal hematopoiesis (CH) and produce mutated immune progenies shaping host immunity. Individuals with CH are asymptomatic but have an increased risk of developing leukemia, cardiovascular and pulmonary inflammatory diseases, and severe infections. Using genetic engineering of human HSCs (hHSCs) and transplantation in immunodeficient mice, we describe how a commonly mutated gene in CH, TET2, affects human neutrophil development and function. TET2 loss in hHSCs produce a distinct neutrophil heterogeneity in bone marrow and peripheral tissues by increasing the repopulating capacity of neutrophil progenitors and giving rise to low-granule neutrophils. Human neutrophils that inherited TET2 mutations mount exacerbated inflammatory responses and have more condensed chromatin, which correlates with compact neutrophil extracellular trap (NET) production. We expose here physiological abnormalities that may inform future strategies to detect TET2-CH and prevent NET-mediated pathologies associated with CH. 
