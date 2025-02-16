@@ -10,7 +10,7 @@ citation: 'Huerga Encabo, H., Aramburu, I. V., Garcia-Albornoz, M., Piganeau, M.
 ---
 
 <div class="publication-image">
-  <img src="/images/publications/2023_HuergaEncabo.jpg" alt="Graphical Abstract">
+  <img src="https://raw.githubusercontent.com/EspressoKris/Portfolio/master/images/GraphicalAbstracts/2023_HuergaEncabo.jpg" alt="Graphical Abstract">
   <p class="caption">
     <strong>Key findings:</strong><br/>
     • TET2 mutations in human HSCs shape the innate immune system development in NSG mice<br/>
