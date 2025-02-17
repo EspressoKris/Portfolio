@@ -24,6 +24,12 @@
     
     {% if post.collection == 'publications' %}
       <p>Published in <i>{{ post.venue }}</i>, {{ post.date | default: "1900-01-01" | date: "%Y" }} </p>
+      {% if post.keywords %}
+        <p class="archive__item-keywords" style="font-size: 0.9em; color: #666;">
+          <i class="fa fa-tags" aria-hidden="true"></i> 
+          {{ post.keywords | split: ", " | join: " • " }}
+        </p>
+      {% endif %}
     {% endif %}
 
   </article>
