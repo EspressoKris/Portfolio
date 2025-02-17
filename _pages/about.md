@@ -7,6 +7,3 @@ redirect_from:
   - /about.html
 ---
 
-### Research Word Cloud
-{% include wordcloud.html %}
-
