@@ -7,5 +7,6 @@ redirect_from:
   - /about.html
 ---
 
-### Keywords Word Cloud
-![Word Cloud](wordcloud.png)
+<div style="text-align: center;">
+  <img src="https://raw.githubusercontent.com/EspressoKris/Portfolio/master/scripts/wordcloud.png" alt="Graphical Abstract" style="width: 800px; height: 300px;">
+</div>
