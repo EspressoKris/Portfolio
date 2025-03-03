@@ -27,3 +27,7 @@ Hello! I'm an enthusiastic researcher with a passion for data science and machin
 ### Favorite Quote
 
 > "The only way to do great work is to love what you do." - Steve Jobs
+
+
+### Keywords Word Cloud
+![Word Cloud](wordcloud.png)
