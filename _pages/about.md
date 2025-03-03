@@ -8,5 +8,22 @@ redirect_from:
 ---
 
 <div style="text-align: center;">
-  <img src="https://raw.githubusercontent.com/EspressoKris/Portfolio/master/scripts/wordcloud.png" alt="Graphical Abstract" style="width: 600px; height: 200px;">
+  <img src="https://raw.githubusercontent.com/EspressoKris/Portfolio/master/scripts/wordcloud.png" alt="Wordcloud" style="width: 750px; height: 300px;">
 </div>
+
+---
+
+## About Me
+
+Hello! I'm an enthusiastic researcher with a passion for data science and machine learning. I enjoy exploring new technologies and applying them to solve real-world problems.
+
+### Hobbies
+
+- Reading science fiction novels
+- Hiking and exploring nature trails
+- Cooking and experimenting with new recipes
+- Playing the guitar
+
+### Favorite Quote
+
+> "The only way to do great work is to love what you do." - Steve Jobs
