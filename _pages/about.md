@@ -8,5 +8,5 @@ redirect_from:
 ---
 
 <div style="text-align: center;">
-  <img src="https://raw.githubusercontent.com/EspressoKris/Portfolio/master/scripts/wordcloud.png" alt="Graphical Abstract" style="width: 800px; height: 300px;">
+  <img src="https://raw.githubusercontent.com/EspressoKris/Portfolio/master/scripts/wordcloud.png" alt="Graphical Abstract" style="width: 600px; height: 200px;">
 </div>
