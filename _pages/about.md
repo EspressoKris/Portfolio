@@ -15,10 +15,10 @@ redirect_from:
   }
 
   /* Styles for smaller screens (mobile) */
-  @media {
+  @media (max-width: 768px) {
     .wordcloud-image {
-      width: 700px;
-      height: 170px;
+      width: 100%;
+      height: 80%;
     }
   }
 </style>
