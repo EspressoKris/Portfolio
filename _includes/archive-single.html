@@ -23,7 +23,7 @@
     </h2>
     
     {% if post.collection == 'publications' %}
-      <p>Published in <i>{{ post.venue }}</i>, {{ post.date | default: "1900-01-01" | date: "%Y" }} </p>
+      <p>Published in <i>{{ post.venue }}</i>, {{ post.date | date: "%B %d, %Y" | ordinalize }} </p>
     {% else %}
       <p>Publication date: {{ post.date | date: "%B %d, %Y" | ordinalize }} </p>
     {% endif %}
