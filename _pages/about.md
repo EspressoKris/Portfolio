@@ -7,8 +7,24 @@ redirect_from:
   - /about.html
 ---
 
+<style>
+  /* Default styles for larger screens (PC) */
+  .wordcloud-image {
+    width: 700px;
+    height: 220px;
+  }
+
+  /* Styles for smaller screens (mobile) */
+  @media {
+    .wordcloud-image {
+      width: 700px;
+      height: 170px;
+    }
+  }
+</style>
+
 <div style="text-align: center;">
-  <img src="https://raw.githubusercontent.com/EspressoKris/Portfolio/master/scripts/wordcloud.png" alt="Wordcloud" style="width: 700px; height: 180px;">
+  <img src="https://raw.githubusercontent.com/EspressoKris/Portfolio/master/scripts/wordcloud.png" alt="Wordcloud" class="wordcloud-image">
 </div>
 
 ---
