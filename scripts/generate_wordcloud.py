@@ -30,11 +30,11 @@ mask_image = np.array(Image.open(mask_path))
 
 # Generate a word cloud with the mask
 wordcloud = WordCloud(
-    width=796,
-    height=300,
+    width=900,
+    height=200,
     background_color='white',
     mask=mask_image,
-    contour_width=4,
+    contour_width=1.5,
     contour_color='black',
     stopwords=STOPWORDS
 ).generate(', '.join(keywords))
