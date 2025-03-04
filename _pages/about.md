@@ -8,7 +8,7 @@ redirect_from:
 ---
 
 <div style="text-align: center;">
-  <img src="https://raw.githubusercontent.com/EspressoKris/Portfolio/master/scripts/wordcloud.png" alt="Wordcloud" style="width: 700px; height: 220px;">
+  <img src="https://raw.githubusercontent.com/EspressoKris/Portfolio/master/scripts/wordcloud.png" alt="Wordcloud" style="width: 700px; height: 180px;">
 </div>
 
 ---
@@ -27,8 +27,3 @@ Hello! I'm an enthusiastic researcher with a passion for data science and machin
 ### Favorite Quote
 
 > "The only way to do great work is to love what you do." - Steve Jobs
-
-
-
-### Keywords Word Cloud
-![Word Cloud](wordcloud.png)
