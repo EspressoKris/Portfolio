@@ -24,16 +24,17 @@
     
     {% if post.collection == 'publications' %}
       <p>Published in <i>{{ post.venue }}</i>, {{ post.date | default: "1900-01-01" | date: "%Y" }} </p>
-      {% if post.keywords %}
-        <p class="archive__item-keywords" style="font-size: 0.9em; color: #666;">
-          <i class="fas fa-tags" aria-hidden="true"></i> 
-          {% assign keywords = post.keywords | split: ", " %}
-          {% for keyword in keywords %}
-            <span class="keyword">{{ keyword | strip }}</span>{% unless forloop.last %} • {% endunless %}
-          {% endfor %}
-        </p>
-      {% endif %}
     {% endif %}
-
+    
+    {% if post.keywords %}
+      <p class="archive__item-keywords" style="font-size: 0.9em; color: #666;">
+        <i class="fas fa-tags" aria-hidden="true"></i> 
+        {% assign keywords = post.keywords | split: ", " %}
+        {% for keyword in keywords %}
+          <span class="keyword">{{ keyword | strip }}</span>{% unless forloop.last %} • {% endunless %}
+        {% endfor %}
+      </p>
+    {% endif %}
+    
   </article>
 </div>
