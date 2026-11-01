@@ -1,0 +1,380 @@
+---
+// Interactive, simulated single-cell map (UMAP-style) of haematopoiesis.
+// Switching to "CMML" moves cells: monocytes expand and leukaemic blasts appear.
+// The data are generated in the browser and are illustrative only.
+---
+<figure class="cellmap" data-cellmap>
+  <div class="cellmap__toolbar">
+    <div class="cellmap__states" role="group" aria-label="Condition">
+      <button type="button" class="chip" data-state="healthy" aria-pressed="true">Healthy</button>
+      <button type="button" class="chip" data-state="cmml" aria-pressed="false">CMML</button>
+    </div>
+    <span class="cellmap__count" aria-live="polite"></span>
+  </div>
+
+  <div class="cellmap__stage">
+    <canvas aria-label="Simulated single-cell map of blood cell development. Use the Healthy and CMML buttons to compare." role="img"></canvas>
+    <div class="cellmap__tip" hidden></div>
+    <span class="cellmap__axis cellmap__axis--x">UMAP 1</span>
+    <span class="cellmap__axis cellmap__axis--y">UMAP 2</span>
+  </div>
+
+  <ul class="cellmap__legend" aria-label="Cell types (hover or tap to highlight)"></ul>
+
+  <figcaption>
+    <strong>Simulated data.</strong> An illustration of how chronic myelomonocytic leukaemia reshapes blood
+    cell development: monocytes expand, other lineages shrink and leukaemic blasts emerge.
+  </figcaption>
+</figure>
+
+<script>
+  type Pop = { key: string; label: string; color: string; healthy: number; cmml: number; shape: Shape };
+  type Shape =
+    | { kind: 'blob'; x: number; y: number; sx: number; sy: number }
+    | { kind: 'curve'; p0: [number, number]; p1: [number, number]; p2: [number, number]; w: number };
+
+  // Layout in a [-1, 1] box. Counts sum to the same total in both states.
+  const POPS: Pop[] = [
+    { key: 'hsc', label: 'Stem cells (HSC)', color: '#f28e2b', healthy: 90, cmml: 60, shape: { kind: 'blob', x: -0.62, y: -0.02, sx: 0.06, sy: 0.07 } },
+    { key: 'mpp', label: 'Progenitors', color: '#e9b949', healthy: 150, cmml: 110, shape: { kind: 'curve', p0: [-0.58, 0], p1: [-0.42, 0.02], p2: [-0.22, 0], w: 0.05 } },
+    { key: 'ery', label: 'Erythroid', color: '#e15759', healthy: 300, cmml: 160, shape: { kind: 'curve', p0: [-0.3, 0.06], p1: [-0.38, 0.5], p2: [-0.02, 0.74], w: 0.05 } },
+    { key: 'mk', label: 'Megakaryocytes', color: '#ff9da7', healthy: 70, cmml: 50, shape: { kind: 'curve', p0: [-0.36, 0.06], p1: [-0.6, 0.28], p2: [-0.66, 0.5], w: 0.035 } },
+    { key: 'neu', label: 'Neutrophils', color: '#59a14f', healthy: 320, cmml: 210, shape: { kind: 'curve', p0: [-0.2, 0.02], p1: [0.18, 0.02], p2: [0.5, 0.26], w: 0.055 } },
+    { key: 'mono', label: 'Monocytes', color: '#4e79a7', healthy: 200, cmml: 560, shape: { kind: 'curve', p0: [-0.2, -0.04], p1: [0.12, -0.36], p2: [0.52, -0.5], w: 0.07 } },
+    { key: 'blast', label: 'Leukaemic blasts', color: 'ink', healthy: 0, cmml: 180, shape: { kind: 'blob', x: -0.36, y: -0.34, sx: 0.07, sy: 0.06 } },
+    { key: 'b', label: 'B cells', color: '#b07aa1', healthy: 170, cmml: 60, shape: { kind: 'curve', p0: [0.62, 0.52], p1: [0.76, 0.62], p2: [0.86, 0.8], w: 0.045 } },
+    { key: 't', label: 'T & NK cells', color: '#76b7b2', healthy: 200, cmml: 110, shape: { kind: 'blob', x: 0.8, y: 0.05, sx: 0.08, sy: 0.12 } },
+  ];
+
+  function rng(seed: number) {
+    return () => {
+      seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const rand = rng(20251);
+  const gauss = () => {
+    let u = 0, v = 0;
+    while (u === 0) u = rand();
+    while (v === 0) v = rand();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  };
+
+  function sample(shape: Shape): [number, number] {
+    if (shape.kind === 'blob') return [shape.x + gauss() * shape.sx, shape.y + gauss() * shape.sy];
+    const t = Math.pow(rand(), 0.85);
+    const { p0, p1, p2, w } = shape;
+    const a = (1 - t) * (1 - t), b = 2 * (1 - t) * t, c = t * t;
+    const width = w * (0.6 + 0.8 * t);
+    return [a * p0[0] + b * p1[0] + c * p2[0] + gauss() * width, a * p0[1] + b * p1[1] + c * p2[1] + gauss() * width];
+  }
+
+  type Cell = { ax: number; ay: number; bx: number; by: number; a: number; b: number };
+
+  // Pair cells across states: cells keep their type where possible,
+  // and the surplus of shrinking types becomes the growing types.
+  function buildCells(): Cell[] {
+    const cells: Cell[] = [];
+    const freedA: { x: number; y: number; p: number }[] = [];
+    const needB: number[] = [];
+    POPS.forEach((p, i) => {
+      const keep = Math.min(p.healthy, p.cmml);
+      for (let k = 0; k < keep; k++) {
+        const [ax, ay] = sample(p.shape);
+        const [bx, by] = [ax + gauss() * 0.015, ay + gauss() * 0.015];
+        cells.push({ ax, ay, bx, by, a: i, b: i });
+      }
+      for (let k = keep; k < p.healthy; k++) { const [x, y] = sample(p.shape); freedA.push({ x, y, p: i }); }
+      for (let k = keep; k < p.cmml; k++) needB.push(i);
+    });
+    // shuffle the targets so movement looks organic
+    for (let i = needB.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [needB[i], needB[j]] = [needB[j], needB[i]]; }
+    freedA.forEach((f, k) => {
+      const target = needB[k];
+      const [bx, by] = sample(POPS[target].shape);
+      cells.push({ ax: f.x, ay: f.y, bx, by, a: f.p, b: target });
+    });
+    return cells;
+  }
+
+  const root = document.querySelector<HTMLElement>('[data-cellmap]');
+  if (root) init(root);
+
+  function init(root: HTMLElement) {
+    const canvas = root.querySelector('canvas')!;
+    const ctx = canvas.getContext('2d')!;
+    const tip = root.querySelector<HTMLElement>('.cellmap__tip')!;
+    const legend = root.querySelector<HTMLUListElement>('.cellmap__legend')!;
+    const countEl = root.querySelector<HTMLElement>('.cellmap__count')!;
+    const stateBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-state]')];
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const cells = buildCells();
+    let mix = 0;            // 0 = healthy, 1 = CMML
+    let target = 0;
+    let intro = reduced ? 1 : 0;
+    let highlight: number | null = null;
+    let hoverCell: Cell | null = null;
+    let width = 0, height = 0, dpr = 1;
+    let running = false;
+    let userTouched = false;
+    let visible = false;
+    let ink = '#17212b';
+
+    const readInk = () => { ink = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#17212b'; };
+    readInk();
+    document.addEventListener('themechange', () => { readInk(); draw(); });
+    new MutationObserver(() => { readInk(); draw(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    const colorOf = (i: number) => (POPS[i].color === 'ink' ? ink : POPS[i].color);
+
+    // Legend
+    POPS.forEach((p, i) => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cellmap__key';
+      btn.dataset.index = String(i);
+      btn.innerHTML = `<span class="cellmap__dot"></span><span>${p.label}</span>`;
+      const on = () => { highlight = i; draw(); };
+      const off = () => { highlight = null; draw(); };
+      btn.addEventListener('mouseenter', on);
+      btn.addEventListener('mouseleave', off);
+      btn.addEventListener('focus', on);
+      btn.addEventListener('blur', off);
+      btn.addEventListener('click', () => { highlight = highlight === i ? null : i; draw(); });
+      li.appendChild(btn);
+      legend.appendChild(li);
+    });
+    const paintLegend = () => {
+      legend.querySelectorAll<HTMLElement>('.cellmap__key').forEach((el) => {
+        const i = Number(el.dataset.index);
+        (el.querySelector('.cellmap__dot') as HTMLElement).style.background = colorOf(i);
+        const n = target === 1 ? POPS[i].cmml : POPS[i].healthy;
+        el.classList.toggle('is-empty', n === 0);
+        el.classList.toggle('is-active', highlight === i);
+      });
+    };
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      width = rect.width; height = rect.height;
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      draw();
+    }
+
+    const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const toPx = (x: number, y: number): [number, number] => {
+      const pad = 18, s = Math.min(width, height * 1.25) / 2 - pad;
+      return [width / 2 + (x - 0.12) * s, height / 2 + (y - 0.12) * s * 0.8]; // centre the drawing
+    };
+
+    function cellPos(c: Cell): [number, number] {
+      const m = ease(mix);
+      const k = ease(intro);
+      const x = (c.ax + (c.bx - c.ax) * m) * k + (-0.62) * (1 - k);
+      const y = (c.ay + (c.by - c.ay) * m) * k + (-0.02) * (1 - k);
+      return toPx(x, y);
+    }
+
+    function draw() {
+      if (!width) return;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      const r = Math.max(1.6, Math.min(2.6, width / 260));
+      const m = mix;
+      for (const c of cells) {
+        const typ = m < 0.5 ? c.a : c.b;
+        if (POPS[typ][m < 0.5 ? 'healthy' : 'cmml'] === 0) continue;
+        const [x, y] = cellPos(c);
+        const dim = highlight !== null && typ !== highlight;
+        ctx.globalAlpha = dim ? 0.1 : 0.85;
+        ctx.fillStyle = colorOf(typ);
+        ctx.beginPath();
+        ctx.arc(x, y, typ === 6 ? r * 1.25 : r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (hoverCell) {
+        const [x, y] = cellPos(hoverCell);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(x, y, r * 2.6, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      paintLegend();
+      const total = cells.filter((c) => POPS[target === 1 ? c.b : c.a][target === 1 ? 'cmml' : 'healthy'] > 0).length;
+      countEl.textContent = `${total.toLocaleString()} cells · ${target === 1 ? 'CMML' : 'healthy bone marrow'}`;
+    }
+
+    function animate() {
+      if (running) return;
+      running = true;
+      let last = performance.now();
+      const step = (now: number) => {
+        const dt = Math.min(0.05, (now - last) / 1000);
+        last = now;
+        let moving = false;
+        if (intro < 1) { intro = Math.min(1, intro + dt / 1.4); moving = true; }
+        if (mix !== target) {
+          const dir = Math.sign(target - mix);
+          mix = Math.max(0, Math.min(1, mix + dir * dt / 1.3));
+          if ((dir > 0 && mix >= target) || (dir < 0 && mix <= target)) mix = target;
+          moving = true;
+        }
+        draw();
+        if (moving) requestAnimationFrame(step); else running = false;
+      };
+      requestAnimationFrame(step);
+    }
+
+    function setState(s: 0 | 1, fromUser = false) {
+      if (fromUser) userTouched = true;
+      target = s;
+      stateBtns.forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.state === 'cmml') === (s === 1))));
+      if (reduced) { mix = s; draw(); } else animate();
+    }
+
+    stateBtns.forEach((b) => b.addEventListener('click', () => setState(b.dataset.state === 'cmml' ? 1 : 0, true)));
+
+    // Hover: nearest cell within a few pixels
+    canvas.addEventListener('pointermove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const px = e.clientX - rect.left, py = e.clientY - rect.top;
+      let best: Cell | null = null, bestD = 100;
+      for (const c of cells) {
+        const typ = target === 1 ? c.b : c.a;
+        if (POPS[typ][target === 1 ? 'cmml' : 'healthy'] === 0) continue;
+        const [x, y] = cellPos(c);
+        const d = (x - px) ** 2 + (y - py) ** 2;
+        if (d < bestD) { bestD = d; best = c; }
+      }
+      hoverCell = best;
+      if (best) {
+        const typ = target === 1 ? best.b : best.a;
+        highlight = typ;
+        tip.hidden = false;
+        tip.textContent = POPS[typ].label;
+        tip.style.left = `${px}px`;
+        tip.style.top = `${py}px`;
+      } else {
+        highlight = null;
+        tip.hidden = true;
+      }
+      draw();
+    });
+    canvas.addEventListener('pointerleave', () => { hoverCell = null; highlight = null; tip.hidden = true; draw(); });
+
+    new ResizeObserver(resize).observe(canvas);
+
+    // Start the intro when visible; then gently alternate until the visitor takes over.
+    new IntersectionObserver((entries) => {
+      visible = entries[0].isIntersecting;
+      if (visible) animate();
+    }, { threshold: 0.3 }).observe(canvas);
+
+    if (!reduced) {
+      setInterval(() => {
+        if (!userTouched && visible && !running && document.visibilityState === 'visible') setState(target === 1 ? 0 : 1);
+      }, 5000);
+    }
+    resize();
+    animate(); // play the intro straight away
+  }
+</script>
+
+<style>
+  .cellmap {
+    margin: 0;
+    padding: 1rem 1rem 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  .cellmap__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .cellmap__states { display: flex; gap: 0.4rem; }
+
+  .cellmap__count { font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .cellmap__stage { position: relative; margin: 0.4rem 0 0.2rem; }
+
+  canvas {
+    width: 100%;
+    aspect-ratio: 5 / 4;
+    cursor: crosshair;
+    touch-action: pan-y;
+  }
+
+  .cellmap__tip {
+    position: absolute;
+    z-index: 2;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--bg);
+    background: var(--text);
+    border-radius: 6px;
+    pointer-events: none;
+    transform: translate(-50%, calc(-100% - 12px));
+  }
+
+  .cellmap__axis {
+    position: absolute;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  .cellmap__axis--x { left: 0.2rem; bottom: 0; }
+  .cellmap__axis--y { left: 0; bottom: 1.4rem; transform-origin: left bottom; transform: rotate(-90deg); }
+
+  .cellmap__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.4rem;
+    margin: 0.4rem 0 0.6rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .cellmap__legend :global(.cellmap__key) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    padding: 0.2em 0.55em;
+    font: inherit;
+    font-size: 0.76rem;
+    color: var(--text-soft);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: opacity 0.3s ease, border-color 0.15s ease;
+  }
+
+  .cellmap__legend :global(.cellmap__key:hover),
+  .cellmap__legend :global(.cellmap__key.is-active) { border-color: var(--border); background: var(--bg-soft); }
+  .cellmap__legend :global(.cellmap__key.is-empty) { opacity: 0.35; }
+  .cellmap__legend :global(.cellmap__dot) { width: 0.65em; height: 0.65em; border-radius: 50%; }
+
+  figcaption { font-size: 0.78rem; line-height: 1.5; color: var(--muted); }
+  figcaption strong { color: var(--text-soft); }
+</style>

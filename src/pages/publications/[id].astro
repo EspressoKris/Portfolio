@@ -1,0 +1,156 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import { Image } from 'astro:assets';
+import Base from '../../layouts/Base.astro';
+import Icon from '../../components/Icon.astro';
+import { url, authorsHtml } from '../../lib/url';
+
+export async function getStaticPaths() {
+  const pubs = await getCollection('publications');
+  return pubs.map((pub) => ({ params: { id: pub.id }, props: { pub } }));
+}
+
+const { pub } = Astro.props as { pub: CollectionEntry<'publications'> };
+const { Content } = await render(pub);
+const d = pub.data;
+const doi = d.paperurl.replace('https://doi.org/', '');
+const year = d.date.getFullYear();
+const plainAuthors = d.authors.replace(/\*\*/g, '');
+const citation = `${plainAuthors} (${year}). ${d.title}. ${d.venue}${d.volume ? `, ${d.volume}` : ''}${d.pages ? `, ${d.pages}` : ''}. ${d.paperurl}`;
+---
+<Base title={d.title} description={d.excerpt} image={d.image} type="article">
+  <article class="container narrow paper">
+    <a class="back" href={url('publications/')}><span aria-hidden="true">←</span> All publications</a>
+
+    <p class="paper__meta">
+      <span class="paper__venue">{d.venue}</span>
+      <span aria-hidden="true">·</span>
+      <time datetime={d.date.toISOString().slice(0, 10)}>
+        {d.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+      </time>
+      {d.role === 'First author' && <span class="badge">First author</span>}
+    </p>
+    <h1 class="paper__title serif">{d.title}</h1>
+    <p class="paper__authors" set:html={authorsHtml(d.authors)} />
+
+    <p class="paper__actions">
+      <a class="btn" href={d.paperurl}><Icon name="file" /> Read the paper</a>
+      {d.codeurl && <a class="btn btn--ghost" href={d.codeurl}><Icon name="github" /> Code</a>}
+      <button class="btn btn--ghost" type="button" data-copy={citation}><Icon name="quote" /> <span>Copy citation</span></button>
+    </p>
+
+    {d.excerpt && <p class="paper__excerpt">{d.excerpt}</p>}
+
+    {d.image && (
+      <figure class="paper__figure">
+        <a href={d.image.src}>
+          <Image src={d.image} alt={`Graphical abstract: ${d.title}`} widths={[480, 760, 1200]} sizes="(max-width: 800px) 100vw, 760px" />
+        </a>
+        <figcaption>Graphical abstract</figcaption>
+      </figure>
+    )}
+
+    <div class="prose">
+      <Content />
+    </div>
+
+    {d.keywords.length > 0 && (
+      <ul class="paper__keywords" aria-label="Keywords">
+        {d.keywords.map((k) => <li><a class="chip" href={url(`publications/?topic=${encodeURIComponent(k.toLowerCase())}`)}>{k}</a></li>)}
+      </ul>
+    )}
+
+    <h2 class="paper__h2" id="citation">Citation</h2>
+    <blockquote class="paper__citation">
+      {plainAuthors} ({year}). {d.title}. <em>{d.venue}</em>{d.volume && `, ${d.volume}`}{d.pages && `, ${d.pages}`}.
+      {' '}<a href={d.paperurl}>{d.paperurl}</a>
+    </blockquote>
+
+    <h2 class="paper__h2">Metrics</h2>
+    <div class="paper__metrics">
+      <a href={`https://plu.mx/plum/a/?doi=${encodeURIComponent(doi)}`} class="plumx-details plum-bigben-theme" data-site="plum" data-hide-when-empty="true" data-hide-print="true" data-no-link="true" data-pass-hidden-categories="true" data-hide-mentions="true">{d.title}</a>
+    </div>
+  </article>
+</Base>
+
+<script is:inline src="https://cdn.plu.mx/widget-details.js" defer></script>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const label = btn.querySelector('span')!;
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy!);
+        label.textContent = 'Copied!';
+      } catch {
+        location.hash = 'citation';
+        return;
+      }
+      setTimeout(() => (label.textContent = 'Copy citation'), 1800);
+    });
+  });
+</script>
+
+<style>
+  .paper { padding-top: clamp(1.5rem, 5vw, 3rem); }
+
+  .back { display: inline-block; margin-bottom: 1.5rem; font-size: 0.88rem; font-weight: 500; text-decoration: none; }
+
+  .paper__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0 0 0.6rem;
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+
+  .paper__venue { font-weight: 600; font-style: italic; color: var(--text); }
+
+  .paper__title { margin: 0 0 0.8rem; font-size: clamp(1.7rem, 3.4vw, 2.3rem); line-height: 1.22; }
+
+  .paper__authors { margin: 0 0 1.2rem; font-size: 0.92rem; color: var(--muted); }
+  .paper__authors :global(strong) { color: var(--text); }
+
+  .paper__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1.5rem; }
+
+  .paper__excerpt {
+    margin: 0 0 1.5rem;
+    padding: 1rem 1.2rem;
+    font-size: 1.02rem;
+    color: var(--text-soft);
+    background: var(--accent-soft);
+    border-radius: 12px;
+  }
+
+  .paper__figure { margin: 0 0 1rem; text-align: center; }
+  .paper__figure :global(img) {
+    width: 100%;
+    height: auto;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    filter: var(--img-filter);
+  }
+  .paper__figure figcaption { margin-top: 0.5rem; font-size: 0.8rem; color: var(--muted); }
+
+  .paper__keywords { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 2rem 0 0; padding: 0; list-style: none; }
+  .paper__keywords a { text-decoration: none; }
+
+  .paper__h2 { margin: 2.5rem 0 0.8rem; font-size: 1.25rem; }
+
+  .paper__citation {
+    margin: 0;
+    padding: 1rem 1.2rem;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text-soft);
+    background: var(--bg-soft);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 10px 10px 0;
+    overflow-wrap: anywhere;
+  }
+
+  :global([data-theme='dark']) .paper__metrics :global(.PlumX-Details) { padding: 0.6rem; background: #fff; border-radius: 10px; }
+</style>

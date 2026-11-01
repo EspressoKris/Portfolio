@@ -1,0 +1,23 @@
+---
+import Base from '../layouts/Base.astro';
+import { url } from '../lib/url';
+---
+<Base title="Page not found">
+  <div class="container narrow page">
+    <p class="eyebrow">404</p>
+    <h1 class="serif">This page doesn't exist</h1>
+    <p>It may have moved when the site was rebuilt.</p>
+    <p class="links">
+      <a class="btn" href={url()}>Home</a>
+      <a class="btn btn--ghost" href={url('publications/')}>Publications</a>
+      <a class="btn btn--ghost" href={url('tutorials/')}>Tutorials</a>
+    </p>
+  </div>
+</Base>
+
+<style>
+  .page { padding-top: clamp(3rem, 10vw, 6rem); }
+  h1 { font-size: clamp(2rem, 4vw, 2.6rem); margin: 0 0 0.6rem; }
+  p { color: var(--text-soft); }
+  .links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; }
+</style>

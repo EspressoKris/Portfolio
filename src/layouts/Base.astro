@@ -1,0 +1,198 @@
+---
+import '../styles/fonts.css';
+import '../styles/global.css';
+import ThemeToggle from '../components/ThemeToggle.astro';
+import { profile, nav, links } from '../data/profile';
+import { url } from '../lib/url';
+import Icon from '../components/Icon.astro';
+import profileImg from '../assets/profile.jpeg';
+import { getImage } from 'astro:assets';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: ImageMetadata;
+  type?: 'website' | 'article';
+}
+
+const { title, description = profile.description, image, type = 'website' } = Astro.props;
+const fullTitle = title ? `${title} · ${profile.name}` : `${profile.name} · Computational biologist`;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImage = await getImage({ src: image ?? profileImg, width: 1200, format: 'jpeg' });
+const ogImageUrl = new URL(ogImage.src, Astro.site);
+const current = Astro.url.pathname;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href={url('favicon.svg')} type="image/svg+xml" />
+    <link rel="icon" href={url('favicon.ico')} sizes="any" />
+    <link rel="apple-touch-icon" href={url('apple-touch-icon.png')} />
+    <meta property="og:type" content={type} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@krgurashi" />
+
+    <script is:inline>
+      // Apply the saved (or system) theme before first paint. Shared with Starlight.
+      (function () {
+        var saved = null;
+        try { saved = localStorage.getItem('starlight-theme'); } catch (e) {}
+        var theme = saved || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+        document.documentElement.classList.add('js');
+      })();
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href={url()} aria-label={`${profile.name} — home`}>
+          <span class="brand__mark" aria-hidden="true">KG</span>
+          <span class="brand__name">{profile.name}</span>
+        </a>
+        <nav class="site-nav" aria-label="Main">
+          {nav.map((item) => {
+            const href = url(item.href);
+            const active = current.startsWith(href);
+            return <a href={href} aria-current={active ? 'page' : undefined}>{item.label}</a>;
+          })}
+        </nav>
+        <ThemeToggle />
+      </div>
+    </header>
+
+    <main id="main">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="container site-footer__inner">
+        <p>© {new Date().getFullYear()} {profile.name} · {profile.location}</p>
+        <ul class="site-footer__links">
+          {links.map((l) => (
+            <li><a href={l.href} aria-label={l.label} title={l.label}><Icon name={l.icon} size="18" /></a></li>
+          ))}
+        </ul>
+      </div>
+    </footer>
+
+    <script>
+      // Fade sections in as they scroll into view.
+      const els = document.querySelectorAll('.reveal');
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver((entries) => {
+          for (const e of entries) if (e.isIntersecting) { e.target.classList.add('is-visible'); io.unobserve(e.target); }
+        }, { rootMargin: '0px 0px -8% 0px' });
+        els.forEach((el) => io.observe(el));
+      } else {
+        els.forEach((el) => el.classList.add('is-visible'));
+      }
+    </script>
+  </body>
+</html>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--bg) 85%, transparent);
+    -webkit-backdrop-filter: saturate(160%) blur(12px);
+    backdrop-filter: saturate(160%) blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .site-header__inner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    height: 64px;
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 700;
+    color: var(--text);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .brand__mark {
+    display: inline-grid;
+    place-items: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    font-size: 0.82rem;
+    letter-spacing: 0.02em;
+    color: var(--on-accent);
+    background: var(--accent);
+    border-radius: 9px;
+  }
+
+  .site-nav {
+    display: flex;
+    gap: 0.25rem;
+    margin-left: auto;
+  }
+
+  .site-nav a {
+    padding: 0.45rem 0.75rem;
+    font-size: 0.93rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+  }
+
+  .site-nav a:hover { color: var(--text); background: var(--bg-soft); }
+  .site-nav a[aria-current='page'] { color: var(--accent-text); background: var(--accent-soft); }
+
+  @media (max-width: 560px) {
+    .brand__name { display: none; }
+    .site-nav a { padding: 0.45rem 0.5rem; }
+  }
+
+  .site-footer {
+    margin-top: clamp(4rem, 10vw, 7rem);
+    padding: 2rem 0;
+    font-size: 0.88rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    background: var(--bg-soft);
+  }
+
+  .site-footer__inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .site-footer p { margin: 0; }
+
+  .site-footer__links {
+    display: flex;
+    gap: 0.9rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .site-footer__links a { color: var(--muted); }
+  .site-footer__links a:hover { color: var(--accent-text); }
+</style>

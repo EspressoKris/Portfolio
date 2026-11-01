@@ -1,0 +1,137 @@
+---
+title: CellBender
+description: Remove ambient RNA from droplet single-cell RNA-seq data with CellBender remove-background.
+sidebar:
+  order: 1
+---
+import { Aside } from '@astrojs/starlight/components';
+
+CellBender’s **`remove-background`** models and subtracts **ambient RNA**—free-floating transcripts that get captured in droplets with **no** (or very little) cell material—and then bleed into real cell droplets. In droplet scRNA-seq (10x, etc.), this “soup” makes lowly-expressed genes look present when they aren’t, blurs cluster boundaries, and inflates false positives in DE. CellBender learns (1) which droplets contain cells vs. are empty and (2) a probabilistic background profile, then **denoises** the count matrix by removing the ambient component. The output is a corrected matrix (e.g., `CellBender_counts.h5`) with cleaner signal.
+
+## Why you’d use it
+
+* **Reduce false positives:** Drop genes that appear only due to ambient contamination (e.g., globins in non-erythroid cells).
+* **Sharper clustering & annotation:** Lower background → clearer marker gene contrast.
+* **Better DE & pathway analysis:** Effects aren’t diluted by soup.
+* **More reliable cell calling:** It also helps separate empty droplets from real cells.
+
+## What it does under the hood (high level)
+
+* Treats counts as a mixture of **cell signal + ambient background**.
+* Uses a deep generative model (variational autoencoder–style) to infer per-droplet latent variables and a global/background profile.
+* **Subtracts** the inferred ambient component from each droplet’s counts and flags/removes droplets predicted to be empty.
+
+## When to be cautious
+
+<Aside type="caution" title="Check these before running">
+
+* **Low-RNA cell types** (e.g., early erythroid, certain granulocytes): set conservative parameters to avoid over-subtraction.
+* **Very few empties** (e.g., heavily filtered matrices) reduce accuracy—feed it the **raw** 10x matrix (`raw_feature_bc_matrix.h5`).
+* **Doublets** aren’t fixed by CellBender—run a doublet detector (Scrublet, scDblFinder) separately.
+* **ADT/Protein tags:** CellBender is mainly for **RNA**. For CITE-seq protein, prefer **DSB** or **totalVI** for ambient/noise handling.
+
+</Aside>
+
+## Key settings
+
+
+* `--epochs 150`: more training steps; increases runtime, helpful on noisy data.
+* `--fpr 0.01`: false positive rate for **calling a cell droplet**; smaller = stricter (fewer droplets called as cells, less risk of overcalling).
+* Input: `raw_feature_bc_matrix.h5` (unfiltered) so it can learn the ambient from true empties.
+* Output: `CellBender_counts.h5` (denoised counts) plus logs/metrics in the working directory.
+
+## Example: run on a Slurm cluster
+
+This script writes one CellBender job per Chromium lane and submits them all. Change the paths, container and `--mail-user` to match your cluster.
+
+```bash title="run_cellbender.sh"
+#!/bin/bash
+#SBATCH --job-name=GEX_CellBender_Run_All
+#SBATCH --time=08:00:00
+#SBATCH --ntasks=1
+#SBATCH --mem=1G
+#SBATCH --partition=short
+#SBATCH --mail-type=BEGIN,END,FAIL
+
+##############################################################################
+# Defining paths
+##############################################################################
+
+# Re-direct to general folder
+cd ../..
+project_dir=$(pwd)
+
+# Set the work directory
+data_dir="${project_dir}/Data/10x/Per_ChromiumLane_Mapped_Data"
+output_dir="${project_dir}/Data/10x/Per_ChromiumLane_Mapped_Data"
+script_dir="${project_dir}/Scripts/02_CellBender"
+
+# Create if missing
+scripts_subdir="${script_dir}/SubScripts"
+mkdir -p $scripts_subdir
+rm -rf ${scripts_subdir}/*
+mkdir -p ${scripts_subdir}/Reports
+
+##############################################################################
+# Custom function to create subscript
+##############################################################################
+
+generate_cellbender_script() {
+    local sample_name="$1"
+    local script_title="$2"
+
+    cat <<EOF > "$script_title"
+#!/bin/bash
+#SBATCH --job-name=CellBender_${sample_name}
+#SBATCH --output=Reports/Report-%x.%j.out
+#SBATCH --error=Reports/Report-%x.%j.err
+#SBATCH --time=72:00:00
+#SBATCH --ntasks=16
+#SBATCH --mem=128G
+#SBATCH --partition=long
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --mail-user=your.name@example.ac.uk
+
+############################################################################ 
+
+mkdir -p "/ceph/${output_dir}/${sample_name}/CellBender"
+
+# Set working directory
+cd "/ceph/${output_dir}/${sample_name}/CellBender"
+
+TMPDIR="/ceph/${output_dir}/${sample_name}/CellBender"
+
+export TMPDIR
+
+# Cell Rangers
+singularity exec --bind /ceph/project/meadlab --writable-tmpfs \
+    /ceph/project/meadlab/shared/01__Resources/01__Singularity_Containers/cellbender_v0.3.0.sif cellbender remove-background \
+    --input /ceph/${data_dir}/${sample_name}/outs/raw_feature_bc_matrix.h5 \
+    --epochs 150 \
+    --fpr 0.01 \
+    --output /ceph/${output_dir}/${sample_name}/CellBender/CellBender_counts.h5
+
+rm -rf 'ckpt.tar.gz'
+
+# Report progress
+echo "Successfully processed: $sample_name"
+
+EOF
+}
+
+##############################################################################
+# Creating and running subscripts for each lane
+##############################################################################
+
+for s in $(ls -d ${data_dir}/*); do
+    sample_name=$(basename $s)
+    generate_cellbender_script "$sample_name" "${scripts_subdir}/Cellbender_${sample_name}.sh"
+done
+
+cd ${scripts_subdir}
+
+for subscript in $scripts_subdir/*.sh; do
+    sbatch $subscript
+done
+
+```

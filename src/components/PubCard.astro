@@ -1,0 +1,143 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { Image } from 'astro:assets';
+import Icon from './Icon.astro';
+import { url, authorsHtml } from '../lib/url';
+
+interface Props { pub: CollectionEntry<'publications'>; showExcerpt?: boolean }
+const { pub, showExcerpt = true } = Astro.props;
+const d = pub.data;
+const year = d.date.getFullYear();
+const href = url(`publications/${pub.id}/`);
+const search = [d.title, d.venue, d.authors.replace(/\*/g, ''), d.excerpt, ...d.keywords].join(' ').toLowerCase();
+---
+<article
+  class="pub-card"
+  data-year={year}
+  data-first={d.role === 'First author' ? 'true' : 'false'}
+  data-keywords={d.keywords.map((k) => k.toLowerCase()).join('|')}
+  data-search={search}
+>
+  {d.image && (
+    <a class="pub-card__thumb" href={href} tabindex="-1" aria-hidden="true">
+      <Image src={d.image} alt="" widths={[160, 320]} sizes="160px" loading="lazy" />
+    </a>
+  )}
+  <div class="pub-card__body">
+    <p class="pub-card__meta">
+      <span class="pub-card__venue">{d.venue}</span>
+      <span aria-hidden="true">·</span>
+      <time datetime={d.date.toISOString().slice(0, 10)}>{year}</time>
+      {d.role === 'First author' && <span class="badge">First author</span>}
+    </p>
+    <h3 class="pub-card__title"><a href={href}>{d.title}</a></h3>
+    <p class="pub-card__authors" set:html={authorsHtml(d.authors)} />
+    {showExcerpt && <p class="pub-card__excerpt">{d.excerpt}</p>}
+    <p class="pub-card__links">
+      <a href={d.paperurl}><Icon name="file" /> Paper</a>
+      {d.codeurl && <a href={d.codeurl}><Icon name="github" /> Code</a>}
+      <a href={href}><Icon name="arrow" /> Details</a>
+    </p>
+  </div>
+</article>
+
+<style>
+  .pub-card {
+    display: flex;
+    gap: 1.25rem;
+    padding: 1.15rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  }
+
+  .pub-card:hover {
+    border-color: var(--link);
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+  }
+
+  .pub-card[hidden] { display: none; }
+
+  .pub-card__thumb {
+    flex: 0 0 140px;
+    align-self: flex-start;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .pub-card__thumb :global(img) {
+    width: 100%;
+    height: auto;
+    filter: var(--img-filter);
+    transition: transform 0.4s ease;
+  }
+
+  .pub-card:hover .pub-card__thumb :global(img) { transform: scale(1.04); }
+
+  .pub-card__body { flex: 1; min-width: 0; }
+
+  .pub-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0 0 0.35rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  .pub-card__venue { font-weight: 600; font-style: italic; color: var(--text); }
+
+  .pub-card__title {
+    margin: 0 0 0.4rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.38;
+  }
+
+  .pub-card__title a { color: var(--text); text-decoration: none; }
+  .pub-card__title a:hover { color: var(--accent-text); text-decoration: underline; }
+
+  .pub-card__authors {
+    margin: 0 0 0.5rem;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  .pub-card__authors :global(strong) { color: var(--text); }
+
+  .pub-card__excerpt {
+    margin: 0 0 0.65rem;
+    font-size: 0.93rem;
+    line-height: 1.55;
+    color: var(--text-soft);
+  }
+
+  .pub-card__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.1rem;
+    margin: 0;
+    font-size: 0.85rem;
+  }
+
+  .pub-card__links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .pub-card__links a:hover { text-decoration: underline; }
+
+  @media (max-width: 600px) {
+    .pub-card { flex-direction: column; }
+    .pub-card__thumb { flex-basis: auto; max-width: 200px; }
+  }
+</style>

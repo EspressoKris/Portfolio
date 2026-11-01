@@ -1,0 +1,27 @@
+/* Tutorials (Starlight) use the same palette and fonts as the rest of the site. */
+
+:root {
+  --sl-font: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --sl-content-width: 48rem;
+
+  /* dark (Starlight's default) */
+  --sl-color-accent-low: #15232e;
+  --sl-color-accent: #2c7fab;
+  --sl-color-accent-high: #8fd0ee;
+  --sl-color-black: #0c1116;
+  --sl-color-gray-6: #141c24;
+  --sl-color-gray-5: #24303b;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #e9f2f7;
+  --sl-color-accent: #0f6b8f;
+  --sl-color-accent-high: #0b4f74;
+  --sl-color-white: #17212b;
+  --sl-color-gray-7: #f5f7fa;
+}
+
+.sl-markdown-content h1,
+.sl-markdown-content h2 { letter-spacing: -0.01em; }
+
+h1#_top { font-family: 'Source Serif 4 Variable', Georgia, serif; font-weight: 700; }

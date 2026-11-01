@@ -1,0 +1,23 @@
+---
+title: Introduction to transcriptomics
+description: Curated tutorials for RNA sequencing analysis at bulk and single-cell resolution.
+sidebar:
+  label: Overview
+  order: 0
+---
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Transcriptomics measures which genes are expressed, and how much, across samples or individual cells. Choose a tutorial below.
+
+<CardGrid>
+  <LinkCard
+    title="Single-cell RNA-seq: CellBender"
+    description="Clean ambient RNA from 10x droplet data before clustering and differential expression."
+    href="/Portfolio/tutorials/transcriptomics/single-cell/cellbender/"
+  />
+  <LinkCard
+    title="Bulk RNA-seq"
+    description="Alignment, quality control, counting and DESeq2 (still on GitBook while it's being written)."
+    href="https://espressokris.gitbook.io/tutorials/transcriptomics/bulkrnaseq"
+  />
+</CardGrid>

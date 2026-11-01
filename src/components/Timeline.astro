@@ -1,0 +1,55 @@
+---
+import type { TimelineItem } from '../data/profile';
+interface Props { items: TimelineItem[] }
+const { items } = Astro.props;
+---
+<ol class="timeline">
+  {items.map((item) => (
+    <li>
+      {item.dates && <span class="timeline__dates">{item.dates}</span>}
+      <span class="timeline__title">{item.title}</span>
+      <span class="timeline__org">{item.org}</span>
+    </li>
+  ))}
+</ol>
+
+<style>
+  .timeline { margin: 0; padding: 0; list-style: none; }
+
+  li {
+    position: relative;
+    padding: 0 0 1.3rem 1.5rem;
+    border-left: 2px solid var(--border);
+  }
+
+  li:last-child { padding-bottom: 0.2rem; }
+
+  li::before {
+    content: '';
+    position: absolute;
+    top: 0.45em;
+    left: -7px;
+    width: 12px;
+    height: 12px;
+    background: var(--bg);
+    border: 2px solid var(--accent-text);
+    border-radius: 50%;
+  }
+
+  .timeline__dates {
+    display: block;
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--link);
+  }
+
+  .timeline__title { display: block; font-weight: 600; line-height: 1.4; }
+
+  .timeline__org {
+    display: block;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+</style>

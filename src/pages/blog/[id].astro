@@ -1,0 +1,44 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { url } from '../../lib/url';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map((post) => ({ params: { id: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props as { post: CollectionEntry<'blog'> };
+const { Content, headings } = await render(post);
+// The post body starts with its own H1; use it instead of repeating the title.
+const hasH1 = headings.some((h) => h.depth === 1);
+---
+<Base title={post.data.title} description={post.data.excerpt} type="article">
+  <article class="container narrow page">
+    <a class="back" href={url('blog/')}><span aria-hidden="true">←</span> Blog</a>
+    <p class="meta">
+      <time datetime={post.data.date.toISOString().slice(0, 10)}>
+        {post.data.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+      </time>
+    </p>
+    {!hasH1 && <h1 class="serif title">{post.data.title}</h1>}
+    <div class="prose post-body">
+      <Content />
+    </div>
+  </article>
+</Base>
+
+<style>
+  .page { padding-top: clamp(1.5rem, 5vw, 3rem); }
+  .back { display: inline-block; margin-bottom: 1.2rem; font-size: 0.88rem; font-weight: 500; text-decoration: none; }
+  .meta { margin: 0; font-size: 0.85rem; color: var(--muted); }
+  .title { font-size: clamp(1.8rem, 3.6vw, 2.4rem); }
+  .post-body :global(h1) {
+    margin: 0.3rem 0 1.5rem;
+    font-family: var(--font-serif);
+    font-size: clamp(1.8rem, 3.6vw, 2.4rem);
+    line-height: 1.2;
+    color: var(--text);
+  }
+  .post-body :global(h2) { color: var(--text); }
+</style>

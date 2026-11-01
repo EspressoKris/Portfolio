@@ -1,0 +1,52 @@
+---
+// Replaces Starlight's site title on tutorial pages: brand mark links home,
+// plus links back to the main site sections.
+import { url } from '../lib/url';
+import { nav } from '../data/profile';
+---
+<div class="kg-title">
+  <a class="kg-brand" href={url()} aria-label="Kristian Gurashi — home">
+    <span class="kg-mark" aria-hidden="true">KG</span>
+    <span class="kg-name">Kristian Gurashi</span>
+  </a>
+  <nav class="kg-nav" aria-label="Main site">
+    {nav.map((n) => (
+      <a href={url(n.href)} aria-current={n.href === 'tutorials/' ? 'page' : undefined}>{n.label}</a>
+    ))}
+  </nav>
+</div>
+
+<style>
+  .kg-title { display: flex; align-items: center; gap: 1.25rem; min-width: 0; }
+  .kg-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-weight: 700;
+    color: var(--sl-color-white);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .kg-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.78rem;
+    color: #fff;
+    background: var(--sl-color-accent);
+    border-radius: 8px;
+  }
+  .kg-nav { display: flex; gap: 0.15rem; }
+  .kg-nav a {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.9rem;
+    color: var(--sl-color-gray-3);
+    text-decoration: none;
+    border-radius: 6px;
+  }
+  .kg-nav a:hover { color: var(--sl-color-white); background: var(--sl-color-gray-6); }
+  .kg-nav a[aria-current='page'] { color: var(--sl-color-text-accent); background: var(--sl-color-accent-low); }
+  @media (max-width: 72rem) { .kg-name { display: none; } }
+  @media (max-width: 50rem) { .kg-nav { display: none; } }
+</style>

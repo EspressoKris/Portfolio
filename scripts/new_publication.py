@@ -4,7 +4,7 @@
     python scripts/new_publication.py 10.1016/j.xcrm.2025.101933 --image ~/Downloads/abstract.jpg --featured
 
 Fetches title, journal, date, volume, pages, authors and (when available) the
-abstract from Crossref, then writes _publications/YYYY-MM-DD-<slug>.md.
+abstract from Crossref, then writes src/content/publications/YYYY-MM-DD-<slug>.md.
 Afterwards, open the file and fill in `excerpt` and `keywords`.
 No extra packages needed.
 """
@@ -19,8 +19,8 @@ import urllib.parse
 import urllib.request
 
 REPO = Path(__file__).resolve().parent.parent
-PUBLICATIONS = REPO / "_publications"
-ABSTRACTS = REPO / "images" / "GraphicalAbstracts"
+PUBLICATIONS = REPO / "src" / "content" / "publications"
+ABSTRACTS = REPO / "src" / "assets" / "abstracts"
 MY_SURNAME = "Gurashi"
 
 
@@ -77,7 +77,7 @@ def yaml_str(text: str) -> str:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("doi", help="DOI, with or without https://doi.org/")
-    ap.add_argument("--image", type=Path, help="graphical abstract to copy into images/GraphicalAbstracts/")
+    ap.add_argument("--image", type=Path, help="graphical abstract to copy into src/assets/abstracts/")
     ap.add_argument("--code", help="URL of the code repository")
     ap.add_argument("--featured", action="store_true", help="show on the homepage")
     args = ap.parse_args()
@@ -97,7 +97,6 @@ def main() -> None:
     lines = [
         "---",
         f"title: {yaml_str(title)}",
-        "collection: publications",
         f"date: {date}",
         f"venue: {yaml_str(venue)}",
         f"volume: {yaml_str(msg.get('volume', ''))}",
@@ -110,7 +109,7 @@ def main() -> None:
     if args.image:
         dest = ABSTRACTS / f"{date[:4]}_{slugify(venue, 2) or 'paper'}_{slugify(title, 3)}{args.image.suffix.lower()}"
         shutil.copy(args.image.expanduser(), dest)
-        lines.append(f"image: /images/GraphicalAbstracts/{dest.name}")
+        lines.append(f"image: ../../assets/abstracts/{dest.name}")
     lines += [
         'excerpt: "TODO: one sentence on the main finding."',
         *(["featured: true"] if args.featured else []),

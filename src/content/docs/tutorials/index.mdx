@@ -1,0 +1,29 @@
+---
+title: Tutorials
+description: Hands-on bioinformatics tutorials, from raw data to results.
+sidebar:
+  label: Welcome
+---
+import { CardGrid, LinkCard, Aside } from '@astrojs/starlight/components';
+
+Hands-on tutorials that walk through bioinformatics analyses from start to finish, with no deep background knowledge required. Pick an area and dive into the analysis you need.
+
+## Jump right in
+
+<CardGrid>
+  <LinkCard
+    title="Transcriptomics"
+    description="Bulk and single-cell RNA-seq analysis."
+    href="/Portfolio/tutorials/transcriptomics/"
+  />
+  <LinkCard
+    title="CellBender"
+    description="Remove ambient RNA from droplet single-cell data."
+    href="/Portfolio/tutorials/transcriptomics/single-cell/cellbender/"
+  />
+</CardGrid>
+
+<Aside type="note" title="Moving in progress">
+These tutorials are moving here from GitBook. Topics not yet moved (genomes, genotyping, GEO/SRA downloads) are still on
+the [original tutorial site](https://espressokris.gitbook.io/tutorials).
+</Aside>
