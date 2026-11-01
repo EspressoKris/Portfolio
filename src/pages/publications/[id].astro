@@ -49,7 +49,7 @@ const citation = `${plainAuthors} (${year}). ${d.title}. ${d.venue}${d.volume ? 
     {d.image && (
       <figure class="paper__figure">
         <a href={d.image.src}>
-          <Image src={d.image} alt={`Graphical abstract: ${d.title}`} widths={[480, 760, 1200]} sizes="(max-width: 800px) 100vw, 760px" />
+          <Image src={d.image} alt={`Graphical abstract: ${d.title}`} widths={[380, 760]} sizes="(max-width: 420px) 100vw, 380px" />
         </a>
         <figcaption>Graphical abstract</figcaption>
       </figure>
@@ -153,6 +153,8 @@ const citation = `${plainAuthors} (${year}). ${d.title}. ${d.venue}${d.volume ? 
   .paper__figure { margin: 0 0 1rem; text-align: center; }
   .paper__figure :global(img) {
     width: 100%;
+    max-width: 380px;
+    margin: 0 auto;
     height: auto;
     background: #fff;
     border: 1px solid var(--border);
