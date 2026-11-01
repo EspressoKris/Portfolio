@@ -16,3 +16,6 @@ npm-debug.log*
 # Python
 __pycache__/
 .ipynb_checkpoints/
+
+# Tutorials live in a separate private repo (checked out here at build time)
+src/content/docs/tutorials/

@@ -47,7 +47,7 @@ const citation = `${plainAuthors} (${year}). ${d.title}. ${d.venue}${d.volume ? 
     {d.image && (
       <figure class="paper__figure">
         <a href={d.image.src}>
-          <Image src={d.image} alt={`Graphical abstract: ${d.title}`} widths={[380, 760]} sizes="(max-width: 420px) 100vw, 380px" />
+          <Image src={d.image} alt={`Graphical abstract: ${d.title}`} widths={[480, 960, 1200]} sizes="(max-width: 520px) 100vw, 560px" />
         </a>
         <figcaption>Graphical abstract</figcaption>
       </figure>
@@ -141,9 +141,11 @@ const citation = `${plainAuthors} (${year}). ${d.title}. ${d.venue}${d.volume ? 
 
 
   .paper__figure { margin: 0 0 1rem; text-align: center; }
+  /* Similar visual size for every abstract: square ones ~460px, wider ones matched by height */
   .paper__figure :global(img) {
-    width: 100%;
-    max-width: 380px;
+    width: auto;
+    max-width: min(100%, 560px);
+    max-height: 460px;
     margin: 0 auto;
     height: auto;
     background: #fff;

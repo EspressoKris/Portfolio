@@ -1,6 +1,13 @@
 # Builds the Astro site and deploys it to GitHub Pages on every push to master.
 # The word cloud is regenerated from publication keywords first.
-# Requires: Settings → Pages → Build and deployment → Source = "GitHub Actions".
+# Tutorials come from the private repo EspressoKris/Portfolio-tutorials and are
+# encrypted with a password (scripts/protect-tutorials.mjs).
+#
+# Requires:
+# - Settings → Pages → Build and deployment → Source = "GitHub Actions"
+# - Secret TUTORIALS_DEPLOY_KEY: private half of a read-only deploy key on the tutorials repo
+# - Secret TUTORIALS_PASSWORD: the password readers type to open the tutorials
+# After editing tutorials, run this workflow from the Actions tab ("Run workflow").
 name: Deploy site
 
 on:
@@ -20,9 +27,18 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    env:
+      TUTORIALS_PASSWORD: ${{ secrets.TUTORIALS_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Checkout private tutorials
+        uses: actions/checkout@v7
+        with:
+          repository: EspressoKris/Portfolio-tutorials
+          path: src/content/docs/tutorials
+          ssh-key: ${{ secrets.TUTORIALS_DEPLOY_KEY }}
 
       - name: Set up Python
         uses: actions/setup-python@v6

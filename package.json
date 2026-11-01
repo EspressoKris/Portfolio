@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node scripts/protect-tutorials.mjs",
     "preview": "astro preview",
     "new-pub": "python3 scripts/new_publication.py",
     "wordcloud": "python3 scripts/build_wordcloud.py",
@@ -20,5 +20,8 @@
   },
   "engines": {
     "node": ">=22.23.4"
+  },
+  "devDependencies": {
+    "staticrypt": "^3.5.4"
   }
 }

@@ -46,7 +46,9 @@ export default defineConfig({
         },
       ],
       disable404Route: true,
-      editLink: { baseUrl: 'https://github.com/EspressoKris/Portfolio/edit/master/' },
+      // Tutorials are password protected: no search index (it would expose their text)
+      // and no "edit" links (the source lives in a private repo).
+      pagefind: false,
       lastUpdated: true,
     }),
   ],
