@@ -26,9 +26,7 @@ const shortTitle = (t: string) => (t.length > 78 ? t.slice(0, 76).replace(/\s+\S
         <span class="xp__place">{item.place}</span>
         {item.label && <span class="xp__label">{item.label}</span>}
         {item.photo && (
-          <a class="xp__photo-link" href={item.photo.src} target="_blank" rel="noopener" title="Open full size">
-            <Image src={item.photo} alt={item.photoAlt ?? ''} widths={[200, 400]} sizes="200px" class="xp__photo" loading="lazy" />
-          </a>
+          <Image src={item.photo} alt={item.photoAlt ?? ''} widths={[200, 400]} sizes="200px" class="xp__photo" loading="lazy" />
         )}
       </div>
       <div class="xp__what">
@@ -113,10 +111,7 @@ const shortTitle = (t: string) => (t.length > 78 ? t.slice(0, 76).replace(/\s+\S
 
   .xp__when { display: flex; flex-wrap: wrap; gap: 0.2rem 0.7rem; align-items: baseline; }
   @media (min-width: 760px) { .xp__when { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; gap: 0.2rem; } }
-  .xp__photo-link { display: block; flex: none; width: 100%; max-width: 200px; cursor: zoom-in; }
-  .xp__photo-link :global(.xp__photo) { transition: transform 0.2s ease; }
-  .xp__photo-link:hover :global(.xp__photo) { transform: scale(1.02); }
-  @media (max-width: 759px) { .xp__photo-link { flex-basis: 100%; } }
+  @media (max-width: 759px) { .xp__when :global(.xp__photo) { flex-basis: 100%; } }
 
   .xp__dates {
     font-size: 0.82rem;
@@ -133,6 +128,8 @@ const shortTitle = (t: string) => (t.length > 78 ? t.slice(0, 76).replace(/\s+\S
     width: 100%;
     max-width: 200px;
     height: auto;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
     margin-top: 0.8rem;
     border-radius: 12px;
     box-shadow: 0 0 0 1px var(--border), var(--shadow);

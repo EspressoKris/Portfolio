@@ -1,5 +1,5 @@
 import phdPhoto from '../assets/career/phd-manchester.jpg';
-import kclPhoto from '../assets/career/kcl-lab.jpg';
+import kclPhoto from '../assets/career/kcl-graduation.jpg';
 import oxfordPhoto from '../assets/career/oxford-group.jpg';
 
 // Everything about you that appears around the site.
@@ -47,7 +47,7 @@ export type TimelineItem = { title: string; org: string; dates?: string };
 // `links` are optional extra links (site paths without a leading slash, or full URLs).
 export type Highlight = { title: string; text: string; tag?: string };
 // `photo` is an optional picture from that time of your career (put it in src/assets/career/,
-//   import it at the top of this file) with `photoAlt` describing it.
+//   cropped to 4:5, and import it at the top of this file) with `photoAlt` describing it.
 export type ExperienceItem = TimelineItem & {
   place: string;
   label?: string;
@@ -188,7 +188,7 @@ export const experience: ExperienceItem[] = [
     place: "King's College London",
     dates: 'Jan 2018 – Jan 2019',
     photo: kclPhoto,
-    photoAlt: "Kristian in a lab coat during his time as a research associate at King's College London",
+    photoAlt: "Kristian in graduation gown and hood at his King's College London graduation",
     summary:
       'My MRes project, continued as a research assistant: mostly lab work, with my first steps in computational analysis.',
     highlights: [
