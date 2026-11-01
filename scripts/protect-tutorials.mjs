@@ -12,19 +12,18 @@ const DIR = 'dist/tutorials';
 const SALT = 'bbbfbc518abab6a1862e0409f8de1444';
 const password = process.env.TUTORIALS_PASSWORD;
 const inCI = Boolean(process.env.CI);
+// In GitHub Actions, '::error::' lines show up as public annotations on the run.
+const fail = (msg) => { console.error(inCI ? `::error title=protect-tutorials::${msg}` : msg); process.exit(1); };
 
 if (!existsSync(DIR)) {
   const msg = `protect-tutorials: ${DIR} not found (tutorials repo not checked out?)`;
-  if (inCI) { console.error(msg); process.exit(1); }
+  if (inCI) fail(msg);
   console.warn(`${msg}; skipping.`);
   process.exit(0);
 }
 
 if (!password) {
-  if (inCI) {
-    console.error('protect-tutorials: TUTORIALS_PASSWORD is not set; refusing to publish unprotected tutorials.');
-    process.exit(1);
-  }
+  if (inCI) fail('TUTORIALS_PASSWORD is not set (add it under Settings → Secrets and variables → Actions); refusing to publish unprotected tutorials.');
   console.warn('protect-tutorials: TUTORIALS_PASSWORD not set; tutorials left unencrypted (local build only).');
   process.exit(0);
 }
@@ -44,5 +43,5 @@ const args = [
   '--template-color-secondary', '#f5f7fa',
 ];
 const res = spawnSync('npx', args, { stdio: 'inherit', env: { ...process.env, STATICRYPT_PASSWORD: password } });
-if (res.status !== 0) process.exit(res.status ?? 1);
+if (res.status !== 0) fail(`StatiCrypt failed with exit code ${res.status}`);
 console.log('protect-tutorials: tutorial pages encrypted.');
