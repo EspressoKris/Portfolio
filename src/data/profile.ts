@@ -157,7 +157,7 @@ export const experience: ExperienceItem[] = [
     title: 'Business Development Associate',
     org: 'Innovation Forum',
     place: 'Manchester',
-    label: 'Volunteer',
+    label: 'Voluntary',
     dates: 'Jan 2022 – Jan 2023',
     summary:
       'A volunteer role alongside my PhD to learn how scientific discoveries become products and treatments: commercialisation, technology transfer and the route to industry and the clinic.',
@@ -209,7 +209,7 @@ export const awards: TimelineItem[] = [
 ];
 
 // `anim` picks the small animation on each card (see src/components/ResearchAnim.astro).
-export const research: { icon: string; anim: 'clusters' | 'evolution' | 'tree'; title: string; text: string }[] = [
+export const research: { icon: string; anim: 'clusters' | 'evolution' | 'tree' | 'risk' | 'niche' | 'response'; title: string; text: string }[] = [
   {
     icon: 'cells',
     anim: 'clusters',
@@ -227,6 +227,24 @@ export const research: { icon: string; anim: 'clusters' | 'evolution' | 'tree'; 
     anim: 'tree',
     title: 'Stratification & drug response',
     text: 'Machine-learning approaches that combine clinical, immunophenotype and transcriptome data to predict therapeutic vulnerabilities.',
+  },
+  {
+    icon: 'cells',
+    anim: 'risk',
+    title: 'Genetic risk & multiome',
+    text: 'Reading how open the DNA is and which genes are switched on in the same single cells, to find the inherited changes that raise the risk of blood cancer.',
+  },
+  {
+    icon: 'cells',
+    anim: 'niche',
+    title: 'Cell cross-talk in space',
+    text: 'Single-cell and spatial maps of how leukaemic stem cells talk to the immune and stromal cells around them, and which of those signals drugs can block.',
+  },
+  {
+    icon: 'tree',
+    anim: 'response',
+    title: 'Treatment response',
+    text: 'Following how blood cells mature to find gene-activity signatures that predict which patients will respond to a treatment, before it starts.',
   },
 ];
 

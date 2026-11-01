@@ -137,10 +137,7 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
     isolation: isolate;
   }
 
-  @media (min-width: 760px) {
-    .hero__photo-wrap { width: 100%; }
-    .hero__side { position: sticky; top: 96px; }
-  }
+  @media (min-width: 760px) { .hero__photo-wrap { width: 100%; } }
 
   /* soft offset block behind the photo */
   .hero__photo-wrap::before {
@@ -235,9 +232,12 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
 
   .research-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: 1fr;
     gap: 1rem;
   }
+
+  @media (min-width: 620px) { .research-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 960px) { .research-grid { grid-template-columns: repeat(3, 1fr); } }
 
   .research-card {
     padding: 1.4rem;

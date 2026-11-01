@@ -6,7 +6,11 @@
 //               a fish plot below builds up over time from the same cells
 //   tree      — patients flow down a decision tree into subgroups;
 //               bar charts below show each group's response to three compounds
-interface Props { kind: 'clusters' | 'evolution' | 'tree' }
+//   risk      — a risk variant opens up DNA (chromatin peaks) and raises gene activity
+//   niche     — dendritic cells signal to stem cells in tissue; an inhibitor blocks it
+//   response  — cells mature towards red blood cells; non-responders stall;
+//               signature scores separate responders from non-responders
+interface Props { kind: 'clusters' | 'evolution' | 'tree' | 'risk' | 'niche' | 'response' }
 const { kind } = Astro.props;
 ---
 <div class="ranim">
@@ -22,13 +26,14 @@ const { kind } = Astro.props;
 
   const css = (name: string, fallback: string) =>
     getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
-  let theme = { muted: '#66727e', border: '#e2e7ed', text: '#17212b', soft: '#3b4752', font: 'sans-serif' };
+  let theme = { muted: '#66727e', border: '#e2e7ed', text: '#17212b', soft: '#3b4752', surface: '#ffffff', font: 'sans-serif' };
   const readTheme = () =>
     (theme = {
       muted: css('--muted', theme.muted),
       border: css('--border', theme.border),
       text: css('--text', theme.text),
       soft: css('--text-soft', theme.soft),
+      surface: css('--surface', theme.surface),
       font: getComputedStyle(document.body).fontFamily || 'sans-serif',
     });
   readTheme();
@@ -228,93 +233,374 @@ const { kind } = Astro.props;
     };
   }
 
-  // 3. Patients flow down a decision tree into subgroups; each group responds differently to compounds.
+  // Point on a cubic Bézier curve.
+  const bez = (p0: number[], p1: number[], p2: number[], p3: number[], t: number): [number, number] => {
+    const u = 1 - t;
+    return [
+      u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
+      u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1],
+    ];
+  };
+  // Smooth vertical "elbow" from a to b (tree branches).
+  const elbow = (a: number[], b: number[]) => {
+    const ym = (a[1] + b[1]) / 2;
+    return [a, [a[0], ym], [b[0], ym], b] as const;
+  };
+
+  function pill(ctx: Ctx, cx: number, cy: number, text: string, bg: string, fg: string, size = 9.5, alpha = 1) {
+    ctx.font = `650 ${size}px ${theme.font}`;
+    const tw = ctx.measureText(text).width, ph = size + 8, pw = tw + 14;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = bg;
+    roundRect(ctx, cx - pw / 2, cy - ph / 2, pw, ph, ph / 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    label(ctx, text, cx, cy + 0.5, { size, color: fg, align: 'center', weight: 650 });
+  }
+
+  // 3. Patients flow down a decision tree into groups; each group responds differently to compounds.
   function tree(): Scene {
     const r = rng(23);
-    const root = [0.5, 0.07];
-    const mid = [[0.29, 0.27], [0.71, 0.27]];
-    const leaves = [[0.13, 0.46], [0.38, 0.46], [0.62, 0.46], [0.87, 0.46]];
+    const root = [0.5, 0.09];
+    const mid = [[0.28, 0.25], [0.72, 0.25]];
+    const leaves = [[0.13, 0.42], [0.38, 0.42], [0.62, 0.42], [0.87, 0.42]];
     const colors = [C.blue, C.orange, C.green, C.purple];
-    // response to compounds A, B, C for each group (0–1)
-    const response = [[0.9, 0.25, 0.4], [0.2, 0.85, 0.45], [0.5, 0.3, 0.92], [0.3, 0.6, 0.2]];
-    type Mover = { leaf: number; born: number; jx: number };
-    type Settled = { leaf: number; x: number; y: number; born: number };
+    const response = [[0.92, 0.22, 0.38], [0.18, 0.88, 0.45], [0.48, 0.28, 0.94], [0.3, 0.62, 0.18]];
+    type Mover = { leaf: number; born: number };
     let movers: Mover[] = [];
-    const piles: Settled[][] = leaves.map(() => []);
+    const counts = [9, 7, 8, 6];
+    const flash = [-10, -10, -10, -10];
     let nextSpawn = 0;
-    const travel = 1.6, maxPile = 8;
-    const pileSpot = (leaf: number, n: number) => [leaves[leaf][0] + ((n % 4) - 1.5) * 0.026, 0.535 + Math.floor(n / 4) * 0.05];
-    leaves.forEach((_, l) => { for (let n = 0; n < 5 + (l % 2) * 2; n++) { const [x, y] = pileSpot(l, n); piles[l].push({ leaf: l, x, y, born: -10 }); } });
-    const pos = (m: Mover, k: number): [number, number] => {
-      const a = mid[m.leaf < 2 ? 0 : 1], b = leaves[m.leaf];
-      if (k < 0.5) { const e = ease(k * 2); return [root[0] + (a[0] - root[0]) * e, root[1] + (a[1] - root[1]) * e]; }
-      const e = ease((k - 0.5) * 2); return [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e];
+    const travel = 1.7;
+    const path = (leaf: number, k: number): [number, number] => {
+      const a = mid[leaf < 2 ? 0 : 1];
+      if (k < 0.5) { const [p0, p1, p2, p3] = elbow(root, a); return bez(p0, p1, p2, p3, ease(k * 2)); }
+      const [p0, p1, p2, p3] = elbow(a, leaves[leaf]); return bez(p0, p1, p2, p3, ease((k - 0.5) * 2));
     };
     return {
       still: 0,
       draw(ctx, w, h, t) {
+        const P = (p: number[]) => [p[0] * w, p[1] * h];
+        // branches
         ctx.strokeStyle = theme.border;
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        for (const [i, a] of mid.entries()) {
-          ctx.moveTo(root[0] * w, root[1] * h); ctx.lineTo(a[0] * w, a[1] * h);
-          for (const l of [i * 2, i * 2 + 1]) { ctx.moveTo(a[0] * w, a[1] * h); ctx.lineTo(leaves[l][0] * w, leaves[l][1] * h); }
-        }
-        ctx.stroke();
-        dot(ctx, root[0] * w, root[1] * h, 4, theme.muted, 0.8);
-        mid.forEach((a) => dot(ctx, a[0] * w, a[1] * h, 3.5, theme.muted, 0.7));
-        leaves.forEach((l, i) => dot(ctx, l[0] * w, l[1] * h, 3.5, colors[i], 0.9));
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        const curve = (a: number[], b: number[]) => {
+          const [p0, p1, p2, p3] = elbow(a, b).map(P);
+          ctx.beginPath(); ctx.moveTo(p0[0], p0[1]); ctx.bezierCurveTo(p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]); ctx.stroke();
+        };
+        mid.forEach((a, i) => { curve(root, a); curve(a, leaves[i * 2]); curve(a, leaves[i * 2 + 1]); });
+        mid.forEach((a) => { dot(ctx, a[0] * w, a[1] * h, 4.5, theme.border, 1); dot(ctx, a[0] * w, a[1] * h, 2.2, theme.muted, 1); });
 
+        // travelling patients
         if (!reduced) {
           if (t >= nextSpawn) {
             const u = r();
-            movers.push({ leaf: u < 0.28 ? 0 : u < 0.52 ? 1 : u < 0.78 ? 2 : 3, born: t, jx: (r() - 0.5) * 0.01 });
-            nextSpawn = t + 0.34 + r() * 0.2;
+            movers.push({ leaf: u < 0.28 ? 0 : u < 0.52 ? 1 : u < 0.78 ? 2 : 3, born: t });
+            nextSpawn = t + 0.38 + r() * 0.22;
           }
           movers = movers.filter((m) => {
             const k = (t - m.born) / travel;
-            if (k >= 1) {
-              const pile = piles[m.leaf];
-              if (pile.length >= maxPile) pile.splice(0, 4);
-              pile.forEach((p, n) => { const [x, y] = pileSpot(m.leaf, n); p.x = x; p.y = y; });
-              const [x, y] = pileSpot(m.leaf, pile.length);
-              pile.push({ leaf: m.leaf, x, y, born: t });
-              return false;
-            }
-            const [x, y] = pos(m, k);
-            dot(ctx, (x + m.jx) * w, y * h, 2.6, k < 0.5 ? theme.muted : colors[m.leaf], k < 0.5 ? 0.7 : 0.95);
+            if (k >= 1) { counts[m.leaf]++; flash[m.leaf] = t; return false; }
+            const [x, y] = path(m.leaf, k);
+            const c = k < 0.5 ? theme.muted : colors[m.leaf];
+            dot(ctx, x * w, y * h, 5, c, 0.15);
+            dot(ctx, x * w, y * h, 2.6, c, 0.95);
             return true;
           });
         }
-        for (const pile of piles) for (const p of pile) {
-          const pop = clamp01((t - p.born) / 0.25);
-          dot(ctx, p.x * w, p.y * h, 2.4 * (0.6 + 0.4 * pop), colors[p.leaf], 0.9);
-        }
+        pill(ctx, root[0] * w, root[1] * h, 'Patients', theme.text, theme.surface, 9.5);
 
-        // compound response bars under each group
-        const base = h * 0.9, maxH = h * 0.2, bw = Math.max(5, w * 0.032), gap = Math.max(2, w * 0.008);
-        const grow = reduced ? 1 : ease(clamp01(t / 2));
+        // group pills with patient counts
+        leaves.forEach((l, i) => {
+          const f = Math.exp(-(t - flash[i]) * 6);
+          const [x, y] = P(l);
+          if (f > 0.02) dot(ctx, x, y, 16 + f * 6, colors[i], 0.12 * f);
+          pill(ctx, x, y, `Group ${i + 1}`, colors[i], '#ffffff', 9);
+          label(ctx, `n = ${counts[i]}`, x, y + 15, { size: 8.5, align: 'center' });
+        });
+
+        // drug-response panel
+        const top = h * 0.6, base = h * 0.9, maxH = base - top - h * 0.04;
         ctx.strokeStyle = theme.border; ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(w * 0.04, top - h * 0.02); ctx.lineTo(w * 0.96, top - h * 0.02); ctx.stroke();
+        ctx.setLineDash([]);
+        label(ctx, 'Drug response', w * 0.04, top + h * 0.02, { size: 8.5, weight: 650 });
+        const bw = Math.max(6, w * 0.036), gap = Math.max(2, w * 0.01);
+        const grow = reduced ? 1 : ease(clamp01(t / 1.8));
         leaves.forEach((l, gi) => {
-          const cx = l[0] * w, x0 = cx - (3 * bw + 2 * gap) / 2;
-          ctx.beginPath(); ctx.moveTo(x0 - 3, base + 0.5); ctx.lineTo(x0 + 3 * bw + 2 * gap + 3, base + 0.5); ctx.stroke();
+          const x0 = l[0] * w - (3 * bw + 2 * gap) / 2;
           response[gi].forEach((v, ci) => {
-            const wobble = reduced ? 1 : 0.9 + 0.1 * Math.sin(t * 1.6 + gi * 1.7 + ci * 2.1);
-            const bh = Math.max(1, v * maxH * grow * wobble);
             const x = x0 + ci * (bw + gap);
-            ctx.globalAlpha = [1, 0.7, 0.45][ci];
+            ctx.fillStyle = theme.border; ctx.globalAlpha = 0.5;
+            roundRect(ctx, x, base - maxH, bw, maxH, 3); ctx.fill();
+            const wob = reduced ? 1 : 0.92 + 0.08 * Math.sin(t * 1.5 + gi * 1.7 + ci * 2.3);
+            const bh = Math.max(2, v * maxH * grow * wob);
+            ctx.globalAlpha = 0.35 + 0.65 * v;
             ctx.fillStyle = colors[gi];
-            roundRect(ctx, x, base - bh, bw, bh, 2); ctx.fill();
+            roundRect(ctx, x, base - bh, bw, bh, 3); ctx.fill();
             ctx.globalAlpha = 1;
-            label(ctx, 'ABC'[ci], x + bw / 2, base + 8, { size: 8.5, align: 'center' });
+            label(ctx, 'ABC'[ci], x + bw / 2, base + 8, { size: 8.5, align: 'center', color: v > 0.8 ? theme.text : theme.muted, weight: v > 0.8 ? 700 : 500 });
           });
         });
-        label(ctx, 'Response to compounds A–C', w * 0.5, h * 0.645, { size: 9, align: 'center' });
       },
     };
   }
 
-  const makers = { clusters, evolution, tree } as const;
+  // 4. Genetic risk: a variant changes how open the DNA is (chromatin) and how active a gene is.
+  function risk(): Scene {
+    const peaks = [0.16, 0.28, 0.42, 0.62, 0.8];
+    const ref = [0.45, 0.3, 0.32, 0.7, 0.42];
+    const alt = [0.45, 0.3, 0.95, 0.74, 0.42];
+    const variantX = 0.42;
+    const P = 9.5;
+    const profile = (x: number, hs: number[]) => hs.reduce((s, hh, i) => s + hh * Math.exp(-(((x - peaks[i]) / 0.022) ** 2)), 0);
+    return {
+      still: 6.6,
+      draw(ctx, w, h, t) {
+        const s = t % P;
+        const out = ease(clamp01((s - 8.3) / 1.0));
+        const vis = 1 - out;
+        const x0 = 0.05, x1 = 0.95;
+        // gene track
+        const gy = h * 0.14;
+        label(ctx, 'DNA', w * x0, h * 0.055, { size: 8.5, weight: 650 });
+        ctx.strokeStyle = theme.muted; ctx.globalAlpha = 0.6; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(w * x0, gy); ctx.lineTo(w * x1, gy); ctx.stroke();
+        ctx.globalAlpha = 1;
+        [[0.55, 0.6], [0.66, 0.7], [0.76, 0.86]].forEach(([a, b]) => { ctx.fillStyle = theme.muted; roundRect(ctx, w * a, gy - 5, w * (b - a), 10, 2); ctx.fill(); });
+        label(ctx, 'gene', w * 0.71, gy - 12, { size: 8.5, align: 'center' });
+
+        // scan sweep
+        const scan = clamp01((s - 1.4) / 2.8);
+        const reached = scan * (x1 - x0) + x0 >= variantX;
+        const pulse = reached ? Math.exp(-(s - (1.4 + ((variantX - x0) / (x1 - x0)) * 2.8)) * 2.5) : 0;
+        // variant lollipop
+        ctx.strokeStyle = reached ? C.red : theme.muted; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(w * variantX, gy); ctx.lineTo(w * variantX, h * 0.05); ctx.stroke();
+        dot(ctx, w * variantX, h * 0.05, 3.5 + pulse * 3, reached ? C.red : theme.muted, 1);
+        label(ctx, 'risk variant', w * variantX + 8, h * 0.05, { size: 8.5, color: reached ? C.red : theme.muted, weight: 650 });
+
+        // chromatin tracks
+        const rise = ease(clamp01((s - 0.2) / 1.2)) * vis;
+        const tracks: [string, number[], string, number][] = [['Reference', ref, C.blue, 0.44], ['Risk allele', alt, C.red, 0.66]];
+        const th = h * 0.17;
+        for (const [name, hs, col, baseY] of tracks) {
+          const by = h * baseY;
+          ctx.strokeStyle = theme.border; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(w * x0, by); ctx.lineTo(w * x1, by); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(w * x0, by);
+          for (let i = 0; i <= 120; i++) {
+            const x = x0 + (i / 120) * (x1 - x0);
+            const boost = name === 'Risk allele' && Math.abs(x - variantX) < 0.05 ? 1 + 0.15 * pulse : 1;
+            ctx.lineTo(w * x, by - profile(x, hs) * th * rise * boost);
+          }
+          ctx.lineTo(w * x1, by);
+          ctx.closePath();
+          ctx.globalAlpha = 0.8; ctx.fillStyle = col; ctx.fill(); ctx.globalAlpha = 1;
+          label(ctx, name, w * x0, by - th + 2, { size: 8.5, color: col, weight: 650 });
+        }
+        // scanner band
+        if (scan > 0 && scan < 1 && vis > 0) {
+          const sx = w * (x0 + scan * (x1 - x0));
+          const grad = ctx.createLinearGradient(sx - 24, 0, sx, 0);
+          grad.addColorStop(0, 'rgba(127,127,127,0)');
+          grad.addColorStop(1, 'rgba(127,127,127,0.18)');
+          ctx.fillStyle = grad; ctx.fillRect(sx - 24, h * 0.22, 24, h * 0.46);
+          ctx.strokeStyle = theme.text; ctx.globalAlpha = 0.35; ctx.beginPath(); ctx.moveTo(sx, h * 0.22); ctx.lineTo(sx, h * 0.68); ctx.stroke(); ctx.globalAlpha = 1;
+        }
+        // motif box around the variant
+        if (reached) {
+          const a = clamp01((s - 2.6) / 0.4) * vis;
+          ctx.strokeStyle = C.red; ctx.globalAlpha = a; ctx.lineWidth = 1.2; ctx.setLineDash([3, 3]);
+          roundRect(ctx, w * (variantX - 0.045), h * 0.23, w * 0.09, h * 0.45, 5); ctx.stroke();
+          ctx.setLineDash([]); ctx.globalAlpha = 1;
+          if (a > 0) pill(ctx, w * (variantX + 0.12), h * 0.27, 'TF motif', C.red, '#ffffff', 8, a);
+        }
+        // gene activity
+        const grow = ease(clamp01((s - 4.4) / 1.4)) * vis;
+        label(ctx, 'Gene activity', w * x0, h * 0.77, { size: 8.5, weight: 650 });
+        const bx = w * 0.32, bmax = w * 0.6, bh = Math.max(7, h * 0.055);
+        [['Ref', 0.38, C.blue, 0.83], ['Risk', 0.86, C.red, 0.92]].forEach(([n, v, col, yy]) => {
+          const y = h * (yy as number) - bh / 2;
+          label(ctx, n as string, bx - 8, y + bh / 2, { size: 8.5, align: 'right' });
+          ctx.fillStyle = theme.border; ctx.globalAlpha = 0.5; roundRect(ctx, bx, y, bmax, bh, 3); ctx.fill(); ctx.globalAlpha = 1;
+          ctx.fillStyle = col as string; roundRect(ctx, bx, y, Math.max(0.1, bmax * (v as number) * grow), bh, 3); ctx.fill();
+        });
+      },
+    };
+  }
+
+  // 5. Cell cross-talk in tissue: dendritic cells signal to stem cells; an inhibitor blocks it.
+  function niche(): Scene {
+    const r = rng(41);
+    const cols = 14, rows = 7;
+    type Cell = { x: number; y: number; kind: 0 | 1 | 2; act: number; links: number[] };
+    const cells: Cell[] = [];
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      cells.push({ x: 0.05 + (i + (j % 2) * 0.5) / (cols - 0.5) * 0.9 + (r() - 0.5) * 0.02, y: 0.08 + (j / (rows - 1)) * 0.62 + (r() - 0.5) * 0.03, kind: 0, act: 0, links: [] });
+    }
+    const dcs: number[] = [];
+    while (dcs.length < 6) { const k = Math.floor(r() * cells.length); if (!dcs.some((d) => Math.hypot(cells[d].x - cells[k].x, cells[d].y - cells[k].y) < 0.22)) dcs.push(k); }
+    dcs.forEach((d) => {
+      cells[d].kind = 1;
+      const near = cells.map((c, i) => [Math.hypot((c.x - cells[d].x) * 1.4, c.y - cells[d].y), i]).filter(([, i]) => cells[i].kind === 0).sort((a, b) => a[0] - b[0]).slice(1, 3);
+      near.forEach(([, i]) => { cells[i].kind = 2; cells[d].links.push(i); });
+    });
+    type Sig = { from: number; to: number; born: number; blocked: boolean };
+    let sigs: Sig[] = [];
+    let next = 0;
+    const P = 11;
+    return {
+      still: 3,
+      draw(ctx, w, h, t) {
+        const s = t % P;
+        const inhib = s > 5.5 && s < 9.6;
+        const rad = Math.max(5, Math.min(9, w / 34));
+        // signals
+        if (!reduced && t >= next) {
+          const d = dcs[Math.floor(r() * dcs.length)];
+          const to = cells[d].links[Math.floor(r() * cells[d].links.length)];
+          sigs.push({ from: d, to, born: t, blocked: inhib });
+          next = t + 0.12 + r() * 0.12;
+        }
+        for (const c of cells) c.act *= Math.exp(-0.9 * (1 / 60));
+        // cells
+        for (const c of cells) {
+          const x = c.x * w, y = c.y * h;
+          if (c.kind === 0) {
+            ctx.strokeStyle = theme.border; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.arc(x, y, rad * 0.85, 0, Math.PI * 2); ctx.stroke();
+            dot(ctx, x, y, rad * 0.85, theme.muted, 0.08);
+          }
+        }
+        for (const c of cells) {
+          const x = c.x * w, y = c.y * h;
+          if (c.kind === 2) {
+            const scale = inhib ? 0.78 : 1;
+            const glow = Math.min(1, c.act);
+            if (glow > 0.05) dot(ctx, x, y, rad * (1.5 + glow * 0.6), C.orange, 0.18 * glow);
+            dot(ctx, x, y, rad * scale, C.orange, inhib ? 0.5 : 0.95);
+          } else if (c.kind === 1) {
+            ctx.strokeStyle = C.teal; ctx.lineWidth = 1.6;
+            for (let k = 0; k < 6; k++) {
+              const a = (k / 6) * Math.PI * 2 + 0.3;
+              ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * rad * 1.5, y + Math.sin(a) * rad * 1.5); ctx.stroke();
+            }
+            dot(ctx, x, y, rad * 0.75, C.teal, 1);
+          }
+        }
+        // signal particles
+        sigs = sigs.filter((g) => {
+          const k = (t - g.born) / 0.9;
+          const a = cells[g.from], b = cells[g.to];
+          const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2 - 0.06;
+          const lim = g.blocked ? 0.5 : 1;
+          if (k >= lim) {
+            if (!g.blocked) { b.act += 0.6; return false; }
+            if (k > 1.1) return false;
+            const [x, y] = bez([a.x, a.y], [mx, my], [mx, my], [b.x, b.y], 0.5);
+            ctx.strokeStyle = C.red; ctx.lineWidth = 1.5; ctx.globalAlpha = 1 - (k - 0.5) / 0.6;
+            const X = x * w, Y = y * h, q = 3;
+            ctx.beginPath(); ctx.moveTo(X - q, Y - q); ctx.lineTo(X + q, Y + q); ctx.moveTo(X + q, Y - q); ctx.lineTo(X - q, Y + q); ctx.stroke();
+            ctx.globalAlpha = 1;
+            return true;
+          }
+          const [x, y] = bez([a.x, a.y], [mx, my], [mx, my], [b.x, b.y], k);
+          dot(ctx, x * w, y * h, 2.2, C.teal, 0.95);
+          return true;
+        });
+        // legend + status
+        const ly = h * 0.86;
+        const items: [string, string][] = [['Dendritic cell', C.teal], ['Stem cell', C.orange], ['Stroma', theme.muted]];
+        let lx = w * 0.05;
+        ctx.font = `500 8.5px ${theme.font}`;
+        for (const [n, col] of items) {
+          dot(ctx, lx + 3, ly, 3.2, col, col === theme.muted ? 0.4 : 1);
+          label(ctx, n, lx + 10, ly, { size: 8.5 });
+          lx += 18 + ctx.measureText(n).width + 6;
+        }
+        pill(ctx, w * 0.8, h * 0.95 - 4, inhib ? 'Inhibitor on' : 'Signalling', inhib ? C.red : C.teal, '#ffffff', 8.5);
+      },
+    };
+  }
+
+  // 6. Treatment response: cells mature along a path; non-responders stall; signature scores separate.
+  function response(): Scene {
+    const r = rng(53), g = () => { let u = 0, v = 0; while (!u) u = r(); while (!v) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+    const p0 = [0.06, 0.4], p1 = [0.3, 0.02], p2 = [0.62, 0.62], p3 = [0.94, 0.18];
+    const block = 0.52;
+    type Cell = { resp: boolean; born: number; jx: number; jy: number };
+    let movers: Cell[] = [];
+    let stuck: { x: number; y: number; born: number }[] = [];
+    const strips: { resp: { x: number; born: number }[]; non: { x: number; born: number }[] } = { resp: [], non: [] };
+    const score = (resp: boolean) => clamp01((resp ? 0.3 : 0.72) + g() * 0.09);
+    for (let i = 0; i < 16; i++) { strips.resp.push({ x: score(true), born: -10 }); strips.non.push({ x: score(false), born: -10 }); }
+    const [bx, by] = bez(p0, p1, p2, p3, block);
+    for (let i = 0; i < 10; i++) stuck.push({ x: bx + g() * 0.025, y: by + g() * 0.03, born: -10 });
+    let next = 0;
+    return {
+      still: 0,
+      draw(ctx, w, h, t) {
+        // maturation path
+        const grad = ctx.createLinearGradient(w * p0[0], 0, w * p3[0], 0);
+        grad.addColorStop(0, C.orange); grad.addColorStop(1, C.red);
+        ctx.strokeStyle = grad; ctx.globalAlpha = 0.28; ctx.lineWidth = Math.max(8, h * 0.05); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(w * p0[0], h * p0[1]);
+        ctx.bezierCurveTo(w * p1[0], h * p1[1], w * p2[0], h * p2[1], w * p3[0], h * p3[1]); ctx.stroke();
+        ctx.globalAlpha = 1;
+        label(ctx, 'Stem cell', w * p0[0], h * (p0[1] + 0.09), { size: 8.5, weight: 650, color: C.orange });
+        label(ctx, 'Red blood cell', w * p3[0], h * (p3[1] - 0.1), { size: 8.5, weight: 650, color: C.red, align: 'right' });
+        // block marker
+        ctx.strokeStyle = C.purple; ctx.globalAlpha = 0.6; ctx.lineWidth = 1.2; ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.arc(w * bx, h * by, Math.max(14, w * 0.05), 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]); ctx.globalAlpha = 1;
+
+        if (!reduced && t >= next) {
+          const resp = r() < 0.5;
+          movers.push({ resp, born: t, jx: g() * 0.012, jy: g() * 0.02 });
+          (resp ? strips.resp : strips.non).push({ x: score(resp), born: t });
+          if (strips.resp.length > 26) strips.resp.shift();
+          if (strips.non.length > 26) strips.non.shift();
+          next = t + 0.28 + r() * 0.12;
+        }
+        movers = movers.filter((m) => {
+          const k = (t - m.born) / 3.2;
+          if (!m.resp && k >= block) {
+            stuck.push({ x: bx + g() * 0.025, y: by + g() * 0.03, born: t });
+            if (stuck.length > 22) stuck.shift();
+            return false;
+          }
+          if (k >= 1) return false;
+          const [x, y] = bez(p0, p1, p2, p3, k);
+          dot(ctx, (x + m.jx) * w, (y + m.jy) * h, 2.8, m.resp ? C.green : C.purple, 0.95);
+          return true;
+        });
+        stuck.forEach((c, i) => dot(ctx, c.x * w, c.y * h, 2.6, C.purple, 0.35 + 0.6 * (i / stuck.length)));
+
+        // signature score strips
+        const ax0 = w * 0.36, ax1 = w * 0.95;
+        const rows: [string, { x: number; born: number }[], string, number][] = [['Responders', strips.resp, C.green, 0.74], ['Non-responders', strips.non, C.purple, 0.86]];
+        ctx.strokeStyle = theme.border; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(w * 0.04, h * 0.66); ctx.lineTo(w * 0.96, h * 0.66); ctx.stroke(); ctx.setLineDash([]);
+        for (const [name, pts, col, yy] of rows) {
+          const y = h * yy;
+          label(ctx, name, ax0 - 8, y, { size: 8.5, align: 'right', color: col, weight: 650 });
+          ctx.strokeStyle = theme.border; ctx.beginPath(); ctx.moveTo(ax0, y); ctx.lineTo(ax1, y); ctx.stroke();
+          pts.forEach((p, i) => {
+            const pop = clamp01((t - p.born) / 0.3);
+            const jitter = ((i * 37) % 7 - 3) * 1.1;
+            dot(ctx, ax0 + p.x * (ax1 - ax0), y + jitter, 2.5 * (0.5 + 0.5 * pop), col, 0.85);
+          });
+        }
+        label(ctx, 'signature score →', ax1, h * 0.95, { size: 8.5, align: 'right' });
+      },
+    };
+  }
+
+  const makers = { clusters, evolution, tree, risk, niche, response } as const;
 
   document.querySelectorAll<HTMLCanvasElement>('canvas[data-anim]').forEach((canvas) => {
     const kind = canvas.dataset.anim as keyof typeof makers;
