@@ -67,6 +67,7 @@ export const experience: ExperienceItem[] = [
     dates: 'Jan 2024 – present',
     photo: oxfordPhoto,
     photoAlt: 'Kristian with his research group on a staircase in Oxford',
+    papers: ['2026-02-23-comBO'],
     summary:
       'I lead and co-lead projects that study blood cancers cell by cell: reading which genes are active in tens of thousands of individual cells, and mapping where those cells sit inside the bone marrow.',
     highlights: [
@@ -164,7 +165,7 @@ export const experience: ExperienceItem[] = [
         text: 'A Python package that automatically labels cell types from single-cell protein measurements, used across CMML and MDS patient groups.',
       },
     ],
-    papers: ['2020-08-01-EBM', '2023-06-01-CSC', '2023-04-05-BJH', '2023-11-02-Leukemia', '2024-07-12-BCJ', '2024-10-04-Leukemia'],
+    papers: ['2026-10-15-JCI', '2026-04-28-CAS', '2020-08-01-EBM', '2023-06-01-CSC', '2023-04-05-BJH', '2023-11-02-Leukemia', '2024-07-12-BCJ', '2024-10-04-Leukemia'],
   },
   {
     title: 'Business Development Associate',
