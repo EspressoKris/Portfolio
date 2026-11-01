@@ -7,8 +7,8 @@
 //   tree      — patients flow down a decision tree into subgroups;
 //               bar charts below show each group's response to three compounds
 //   risk      — a risk variant opens up DNA (chromatin peaks) and raises gene activity
-//   niche     — zoom from a tissue section into its cells; dendritic cells signal to stem
-//               cells, then an inhibitor blocks the signal
+//   niche     — Xenium-style view: tissue section, zoom into segmented cells with transcripts;
+//               dendritic cells signal to stem cells, which expand; an inhibitor shrinks them
 //   response  — cells differentiate; disease cells are disrupted at one stage, giving a
 //               disease-specific signature whose score predicts responders
 //   clones    — bulk gives one blended number; single cells reveal one- vs two-hit clones
@@ -437,102 +437,132 @@ const { kind } = Astro.props;
     };
   }
 
-  // 5. Cell cross-talk in tissue: start from a whole tissue section, zoom into a region, watch
-  //    dendritic cells signal to stem cells, block the signal with an inhibitor, zoom back out.
+  // 5. Cell cross-talk in space, styled like a 10x Xenium view: a dark panel, a tissue section
+  //    speckled with transcripts, then a zoom into segmented cells (outlines, nuclei, transcript
+  //    dots). Dendritic cells signal to stem cells, which expand; an inhibitor shrinks them back.
   function niche(): Scene {
     const r = rng(41);
-    // overview: an organic tissue outline filled with tiny cells
+    const BG = '#0a0e13';
+    const DAPI = '#4c6ef5';
+    const GENE = { stroma: '#8b96a3', dc: '#35d0c8', stem: '#ffb020', red: '#ff6b6b', pink: '#d58bd0', green: '#69c46b' };
+    const A = 1.7; // geometry aspect (width / height of the view)
+
+    // ---- overview: tissue outline + transcript speckles
     const outline = Array.from({ length: 48 }, (_, i) => {
       const a = (i / 48) * Math.PI * 2;
       const rad = 1 + 0.12 * Math.sin(a * 3 + 0.7) + 0.07 * Math.sin(a * 5 + 2) + (r() - 0.5) * 0.04;
-      return [0.5 + Math.cos(a) * 0.38 * rad, 0.4 + Math.sin(a) * 0.3 * rad];
+      return [0.5 + Math.cos(a) * 0.4 * rad, 0.5 + Math.sin(a) * 0.38 * rad];
     });
-    const inside = (x: number, y: number) => {
+    const insidePoly = (poly: number[][], x: number, y: number) => {
       let c = false;
-      for (let i = 0, j = outline.length - 1; i < outline.length; j = i++) {
-        const [xi, yi] = outline[i], [xj, yj] = outline[j];
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [xi, yi] = poly[i], [xj, yj] = poly[j];
         if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
       }
       return c;
     };
-    const specks: { x: number; y: number; k: number }[] = [];
-    while (specks.length < 260) {
-      const x = r(), y = r() * 0.8;
-      if (inside(x, y)) specks.push({ x, y, k: r() < 0.06 ? 1 : r() < 0.1 ? 2 : 0 });
+    const speckCols = [GENE.stroma, GENE.stroma, GENE.stroma, GENE.stroma, GENE.dc, GENE.stem, GENE.red, GENE.pink, GENE.green];
+    const specks: { x: number; y: number; c: string }[] = [];
+    while (specks.length < 900) {
+      const x = r(), y = r();
+      if (insidePoly(outline, x, y)) specks.push({ x, y, c: speckCols[Math.floor(r() * speckCols.length)] });
     }
-    const box = { x: 0.58, y: 0.28, w: 0.2, h: 0.2 }; // region we zoom into (fractions of canvas)
+    const box = { x: 0.6, y: 0.33, w: 0.2, h: 0.24 }; // zoom region, fractions of the view
 
-    // zoomed view: packed cells; dendritic cells are plain circles like the rest
-    const cols = 14, rows = 7;
-    type Cell = { x: number; y: number; kind: 0 | 1 | 2; act: number; links: number[] };
-    const cells: Cell[] = [];
+    // ---- zoomed view: Voronoi-segmented cells
+    const cols = 16, rows = 8;
+    const sites: number[][] = [];
     for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
-      cells.push({ x: 0.05 + (i + (j % 2) * 0.5) / (cols - 0.5) * 0.9 + (r() - 0.5) * 0.02, y: 0.08 + (j / (rows - 1)) * 0.62 + (r() - 0.5) * 0.03, kind: 0, act: 0, links: [] });
+      sites.push([((i + (j % 2) * 0.5 + 0.25) / cols + (r() - 0.5) * 0.035) * A, (j + 0.5) / rows + (r() - 0.5) * 0.05]);
     }
+    const clip = (poly: number[][], p: number[], q: number[]) => {
+      const mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2, nx = q[0] - p[0], ny = q[1] - p[1];
+      const side = (v: number[]) => (v[0] - mx) * nx + (v[1] - my) * ny;
+      const out: number[][] = [];
+      for (let i = 0; i < poly.length; i++) {
+        const a = poly[i], b = poly[(i + 1) % poly.length];
+        const sa = side(a), sb = side(b);
+        if (sa <= 0) out.push(a);
+        if (sa * sb < 0) { const t = sa / (sa - sb); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); }
+      }
+      return out;
+    };
+    type Cell = { p: number[]; poly: number[][]; kind: 0 | 1 | 2; act: number; links: number[]; tx: { x: number; y: number; c: string }[] };
+    const cells: Cell[] = sites.map((p) => {
+      let poly = [[Math.max(0, p[0] - 0.2), Math.max(0, p[1] - 0.2)], [Math.min(A, p[0] + 0.2), Math.max(0, p[1] - 0.2)], [Math.min(A, p[0] + 0.2), Math.min(1, p[1] + 0.2)], [Math.max(0, p[0] - 0.2), Math.min(1, p[1] + 0.2)]];
+      for (const q of sites) if (q !== p && Math.hypot(q[0] - p[0], q[1] - p[1]) < 0.35) poly = clip(poly, p, q);
+      // shrink slightly towards the centre so neighbouring outlines don't touch
+      poly = poly.map(([x, y]) => [p[0] + (x - p[0]) * 0.9, p[1] + (y - p[1]) * 0.9]);
+      return { p, poly, kind: 0, act: 0, links: [], tx: [] };
+    });
     const dcs: number[] = [];
-    while (dcs.length < 6) { const k = Math.floor(r() * cells.length); if (!dcs.some((d) => Math.hypot(cells[d].x - cells[k].x, cells[d].y - cells[k].y) < 0.22)) dcs.push(k); }
+    while (dcs.length < 6) { const k = Math.floor(r() * cells.length); if (!dcs.some((d) => Math.hypot(cells[d].p[0] - cells[k].p[0], cells[d].p[1] - cells[k].p[1]) < 0.36)) dcs.push(k); }
     dcs.forEach((d) => {
       cells[d].kind = 1;
-      const near = cells.map((c, i) => [Math.hypot((c.x - cells[d].x) * 1.4, c.y - cells[d].y), i]).filter(([, i]) => cells[i].kind === 0).sort((a, b) => a[0] - b[0]).slice(1, 3);
+      const near = cells.map((c, i) => [Math.hypot(c.p[0] - cells[d].p[0], c.p[1] - cells[d].p[1]), i]).filter(([, i]) => cells[i].kind === 0).sort((a, b) => a[0] - b[0]).slice(0, 2);
       near.forEach(([, i]) => { cells[i].kind = 2; cells[d].links.push(i); });
     });
-    // stromal cells next to stem cells that can become stem cells while signalling is on
     const stemIdx = cells.map((c, i) => (c.kind === 2 ? i : -1)).filter((i) => i >= 0);
     const candidates = cells
-      .map((c, i) => ({ i, d: c.kind === 0 ? Math.min(...stemIdx.map((k) => Math.hypot((cells[k].x - c.x) * 1.4, cells[k].y - c.y))) : 9 }))
-      .filter((c) => c.d < 0.16)
-      .sort((a, b) => a.d - b.d)
-      .slice(0, 16)
-      .map((c) => c.i);
+      .map((c, i) => ({ i, d: c.kind === 0 ? Math.min(...stemIdx.map((k) => Math.hypot(cells[k].p[0] - c.p[0], cells[k].p[1] - c.p[1]))) : 9 }))
+      .filter((c) => c.d < 0.22).sort((a, b) => a.d - b.d).slice(0, 16).map((c) => c.i);
     const rank = new Map(candidates.map((i, k) => [i, k]));
+    // transcripts inside each cell
+    const others = [GENE.stroma, GENE.stroma, GENE.red, GENE.pink, GENE.green];
+    cells.forEach((c, i) => {
+      const n = 6 + Math.floor(r() * 5);
+      for (let k = 0, tries = 0; k < n && tries < 60; tries++) {
+        const x = c.p[0] + (r() - 0.5) * 0.11, y = c.p[1] + (r() - 0.5) * 0.11;
+        if (!insidePoly(c.poly, x, y)) continue;
+        const own = c.kind === 1 ? GENE.dc : c.kind === 2 || rank.has(i) ? GENE.stem : null;
+        c.tx.push({ x, y, c: own && r() < 0.7 ? own : others[Math.floor(r() * others.length)] });
+        k++;
+      }
+    });
+
     type Sig = { from: number; to: number; born: number; blocked: boolean };
     let sigs: Sig[] = [];
     let next = 0;
     const P = 14;
     return {
-      still: 5,
+      still: 6.5,
       draw(ctx, w, h, t) {
         const s = t % P;
         const zoom = ease(clamp01((s - 2.0) / 1.3)) * (1 - ease(clamp01((s - 12.4) / 1.3)));
         const inhib = s > 8.2 && s < 11.8;
         const active = zoom > 0.98;
-        // stem-cell expansion level: grows with signalling, falls back under the inhibitor
         const expand = reduced ? 0.7 : ease(clamp01((s - 3.6) / 4.2)) * (1 - ease(clamp01((s - 8.4) / 2.4)));
         const extra = expand * candidates.length;
+        const vx = w * 0.03, vy = h * 0.03, vw = w * 0.94, vh = h * 0.74; // dark panel
 
-        // overview layer
+        // dark microscope panel
+        ctx.fillStyle = BG; roundRect(ctx, vx, vy, vw, vh, 8); ctx.fill();
+        ctx.save(); roundRect(ctx, vx, vy, vw, vh, 8); ctx.clip();
+
+        // overview
         if (zoom < 1) {
           const a = 1 - zoom;
-          ctx.globalAlpha = a;
           ctx.beginPath();
-          outline.forEach(([x, y], i) => (i ? ctx.lineTo(x * w, y * h) : ctx.moveTo(x * w, y * h)));
+          outline.forEach(([x, y], i) => (i ? ctx.lineTo(vx + x * vw, vy + y * vh) : ctx.moveTo(vx + x * vw, vy + y * vh)));
           ctx.closePath();
-          ctx.fillStyle = C.purple; ctx.globalAlpha = 0.14 * a; ctx.fill();
-          ctx.strokeStyle = C.purple; ctx.globalAlpha = 0.5 * a; ctx.lineWidth = 1.5; ctx.stroke();
-          ctx.globalAlpha = 1;
-          for (const p of specks) dot(ctx, p.x * w, p.y * h, 1.4, p.k === 1 ? C.teal : p.k === 2 ? C.orange : theme.muted, (p.k ? 0.9 : 0.4) * a);
+          ctx.fillStyle = DAPI; ctx.globalAlpha = 0.16 * a; ctx.fill(); ctx.globalAlpha = 1;
+          for (const p of specks) dot(ctx, vx + p.x * vw, vy + p.y * vh, 0.9, p.c, 0.85 * a);
           const pulse = 0.5 + 0.5 * Math.sin(t * 4);
-          ctx.strokeStyle = theme.text; ctx.globalAlpha = (0.5 + 0.4 * pulse) * a; ctx.lineWidth = 1.5;
-          roundRect(ctx, box.x * w, box.y * h, box.w * w, box.h * h, 4); ctx.stroke();
+          ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = (0.55 + 0.4 * pulse) * a; ctx.lineWidth = 1.4;
+          roundRect(ctx, vx + box.x * vw, vy + box.y * vh, box.w * vw, box.h * vh, 3); ctx.stroke(); ctx.globalAlpha = 1;
+          ctx.globalAlpha = a;
+          label(ctx, 'Bone marrow section', vx + 8, vy + 11, { size: 8.5, weight: 650, color: '#e6edf3' });
+          label(ctx, 'zoom in', vx + (box.x + box.w) * vw + 6, vy + box.y * vh + 6, { size: 8, color: '#c3ccd5' });
           ctx.globalAlpha = 1;
-          label(ctx, 'Bone marrow section', w * 0.05, h * 0.06, { size: 9, weight: 650, color: theme.text });
-          if (a > 0.5) label(ctx, 'zoom in', (box.x + box.w + 0.02) * w, (box.y + 0.02) * h, { size: 8.5 });
         }
 
-        // zoomed layer: map the full view from the zoom box (zoom = 0) to the whole canvas (zoom = 1)
+        // zoomed segmentation view (maps from the zoom box at zoom = 0 to the full panel at zoom = 1)
         if (zoom > 0) {
-          const viewH = h * 0.78;
-          const sx = box.w * w / w, sy = box.h * h / viewH;
-          const kx = sx + (1 - sx) * zoom, ky = sy + (1 - sy) * zoom;
-          const ox = box.x * w * (1 - zoom), oy = box.y * h * (1 - zoom);
-          const X = (x: number) => ox + x * w * kx;
-          const Y = (y: number) => oy + y * viewH * ky;
-          const rad = Math.max(5, Math.min(9, w / 34)) * Math.min(kx, ky);
-          ctx.save();
-          ctx.beginPath(); ctx.rect(X(0), Y(0), w * kx, viewH * ky); ctx.clip();
-          ctx.globalAlpha = zoom;
-          ctx.fillStyle = theme.surface; ctx.fillRect(X(0), Y(0), w * kx, viewH * ky);
-          ctx.globalAlpha = 1;
+          const kx = box.w + (1 - box.w) * zoom, ky = box.h + (1 - box.h) * zoom;
+          const ox = vx + box.x * vw * (1 - zoom), oy = vy + box.y * vh * (1 - zoom);
+          const X = (x: number) => ox + (x / A) * vw * kx, Y = (y: number) => oy + y * vh * ky;
+          const sc = Math.min(kx, ky);
+          ctx.globalAlpha = zoom; ctx.fillStyle = BG; ctx.fillRect(ox, oy, vw * kx, vh * ky); ctx.globalAlpha = 1;
 
           if (!reduced && active && t >= next) {
             const d = dcs[Math.floor(r() * dcs.length)];
@@ -542,68 +572,76 @@ const { kind } = Astro.props;
           if (!active) sigs = [];
           for (const c of cells) c.act *= 0.985;
 
-          for (const c of cells) {
-            const x = X(c.x), y = Y(c.y);
-            if (c.kind === 0) {
-              ctx.strokeStyle = theme.border; ctx.lineWidth = 1; ctx.globalAlpha = zoom;
-              ctx.beginPath(); ctx.arc(x, y, rad * 0.85, 0, Math.PI * 2); ctx.stroke();
-              ctx.globalAlpha = 1;
-              dot(ctx, x, y, rad * 0.85, theme.muted, 0.08 * zoom);
-              const k = rank.get(cells.indexOf(c));
-              if (k !== undefined) {
-                const f = clamp01(extra - k); // 0..1: how far this cell has turned into a stem cell
-                if (f > 0) dot(ctx, x, y, rad * 0.85 * (0.4 + 0.6 * f) * (inhib ? 0.8 : 1), C.orange, (inhib ? 0.5 : 0.9) * f * zoom);
-              }
-            } else if (c.kind === 1) {
-              dot(ctx, x, y, rad * 0.85, C.teal, zoom);
-            } else {
-              const glow = Math.min(1, c.act);
-              if (glow > 0.05) dot(ctx, x, y, rad * (1.4 + glow * 0.6), C.orange, 0.2 * glow * zoom);
-              dot(ctx, x, y, rad * 0.85 * (inhib ? 0.8 : 1), C.orange, (inhib ? 0.5 : 0.95) * zoom);
+          cells.forEach((c, i) => {
+            const k = rank.get(i);
+            const f = k !== undefined ? clamp01(extra - k) : 0;
+            const isStem = c.kind === 2 || f > 0;
+            const stemAlpha = c.kind === 2 ? 1 : f;
+            const dim = inhib && isStem ? 0.5 : 1;
+            // outline
+            ctx.beginPath();
+            c.poly.forEach(([x, y], n) => (n ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))));
+            ctx.closePath();
+            if (c.kind === 1) { ctx.fillStyle = GENE.dc; ctx.globalAlpha = 0.14 * zoom; ctx.fill(); }
+            if (isStem) { ctx.fillStyle = GENE.stem; ctx.globalAlpha = (0.1 + 0.25 * Math.min(1, c.act)) * stemAlpha * dim * zoom; ctx.fill(); }
+            ctx.lineWidth = c.kind === 0 && !isStem ? 0.8 : 1.4;
+            ctx.strokeStyle = c.kind === 1 ? GENE.dc : isStem ? GENE.stem : '#ffffff';
+            ctx.globalAlpha = (c.kind === 1 ? 0.95 : isStem ? 0.95 * stemAlpha * dim + (1 - stemAlpha) * 0.22 : 0.22) * zoom;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+            // nucleus (DAPI)
+            const nr = 0.022 * vh * sc * (inhib && isStem ? 0.8 : 1);
+            dot(ctx, X(c.p[0]), Y(c.p[1]), nr, DAPI, 0.45 * zoom);
+            // transcripts
+            for (const tr of c.tx) {
+              const stemTx = tr.c === GENE.stem;
+              const a = stemTx ? (c.kind === 2 ? 1 : f) * dim : 1;
+              if (a > 0) dot(ctx, X(tr.x), Y(tr.y), Math.max(0.7, 1.15 * sc), tr.c, 0.95 * a * zoom);
             }
-          }
+          });
+          // signals
           sigs = sigs.filter((g) => {
             const k = (t - g.born) / 0.9;
-            const a = cells[g.from], b = cells[g.to];
-            const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2 - 0.06;
+            const a = cells[g.from].p, b = cells[g.to].p;
+            const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2 - 0.08;
             if (g.blocked && k >= 0.5) {
               if (k > 1.1) return false;
-              const [x, y] = bez([a.x, a.y], [mx, my], [mx, my], [b.x, b.y], 0.5);
+              const [x, y] = bez(a, [mx, my], [mx, my], b, 0.5);
               const XX = X(x), YY = Y(y), q = 3;
-              ctx.strokeStyle = C.red; ctx.lineWidth = 1.5; ctx.globalAlpha = 1 - (k - 0.5) / 0.6;
+              ctx.strokeStyle = GENE.red; ctx.lineWidth = 1.5; ctx.globalAlpha = 1 - (k - 0.5) / 0.6;
               ctx.beginPath(); ctx.moveTo(XX - q, YY - q); ctx.lineTo(XX + q, YY + q); ctx.moveTo(XX + q, YY - q); ctx.lineTo(XX - q, YY + q); ctx.stroke();
               ctx.globalAlpha = 1;
               return true;
             }
-            if (k >= 1) { b.act += 0.6; return false; }
-            const [x, y] = bez([a.x, a.y], [mx, my], [mx, my], [b.x, b.y], k);
-            dot(ctx, X(x), Y(y), 2.2, C.teal, 0.95);
+            if (k >= 1) { cells[g.to].act += 0.6; return false; }
+            const [x, y] = bez(a, [mx, my], [mx, my], b, k);
+            dot(ctx, X(x), Y(y), 4.5, GENE.dc, 0.25);
+            dot(ctx, X(x), Y(y), 2, '#bffcf8', 1);
             return true;
           });
-          ctx.restore();
-          ctx.strokeStyle = theme.text; ctx.globalAlpha = 0.5 * (1 - zoom); ctx.lineWidth = 1.5;
-          roundRect(ctx, X(0), Y(0), w * kx, viewH * ky, 4); ctx.stroke();
-          ctx.globalAlpha = 1;
+          ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 0.6 * (1 - zoom); ctx.lineWidth = 1.4;
+          roundRect(ctx, ox, oy, vw * kx, vh * ky, 3); ctx.stroke(); ctx.globalAlpha = 1;
         }
+        ctx.restore();
 
-        // legend + status (cell view only)
-        if (zoom > 0.6) {
-          const a = (zoom - 0.6) / 0.4;
+        // legend + status below the panel
+        const a = zoom > 0.6 ? (zoom - 0.6) / 0.4 : 0;
+        const ly = h * 0.86;
+        const items: [string, string][] = [['Dendritic cell', GENE.dc], ['Stem cell', GENE.stem], ['Nucleus', DAPI]];
+        let lx = w * 0.04;
+        ctx.font = `500 8.5px ${theme.font}`;
+        for (const [n, col] of items) {
+          dot(ctx, lx + 3, ly, 3.2, col, 1);
+          label(ctx, n, lx + 10, ly, { size: 8.5 });
+          lx += 18 + ctx.measureText(n).width + 6;
+        }
+        if (a > 0) {
           ctx.globalAlpha = a;
-          const ly = h * 0.86;
-          const items: [string, string][] = [['Dendritic cell', C.teal], ['Stem cell', C.orange], ['Stroma', theme.muted]];
-          let lx = w * 0.05;
-          ctx.font = `500 8.5px ${theme.font}`;
-          for (const [n, col] of items) {
-            dot(ctx, lx + 3, ly, 3.2, col, (col === theme.muted ? 0.4 : 1) * a);
-            label(ctx, n, lx + 10, ly, { size: 8.5 });
-            lx += 18 + ctx.measureText(n).width + 6;
-          }
+          label(ctx, `Stem cells: ${stemIdx.length + Math.floor(extra)}`, w * 0.96, ly, { size: 8.5, align: 'right', weight: 650, color: C.orange });
           ctx.globalAlpha = 1;
-          ctx.globalAlpha = a;
-          label(ctx, `Stem cells: ${stemIdx.length + Math.floor(extra)}`, w * 0.95, ly, { size: 8.5, align: 'right', weight: 650, color: C.orange });
-          ctx.globalAlpha = 1;
-          pill(ctx, w * 0.8, h * 0.95 - 4, inhib ? 'Inhibitor on' : 'Signalling', inhib ? C.red : C.teal, '#ffffff', 8.5, a);
+          pill(ctx, w * 0.8, h * 0.95 - 3, inhib ? 'Inhibitor on' : 'Signalling', inhib ? C.red : C.teal, '#ffffff', 8.5, a);
+        } else {
+          label(ctx, 'Spatial transcriptomics', w * 0.96, ly, { size: 8.5, align: 'right', weight: 650 });
         }
       },
     };
