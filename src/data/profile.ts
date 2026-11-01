@@ -19,7 +19,7 @@ export const intro = {
     'Enthusiastic about data-driven discovery and translational science, bringing lab experiments and computational analysis together.',
   summary: [
     "I'm a scientist who studies cancer with computers. I started out in the lab, and for more than seven years I've combined that hands-on experience with data analysis, working closely with doctors, biologists, statisticians and computer scientists so that what we learn can one day help patients.",
-    "My work spans cancer biology, with a particular focus on leukaemia in children and older adults: how cancers change and become more dangerous, how faulty cells compete with healthy ones, how tumours interact with the immune system, how the genes we inherit affect our risk, and why treatment works for some people but not others. I'm now widening this to a more systems-level view, looking at how the whole body responds to disease, infection and other stresses.",
+    "My work spans cancer biology, with a particular focus on leukaemia in children and ageing adults: how chronic cancers change into acute, dangerous phases, how faulty cells cross-talk and compete with healthy ones, how tumours interact with their microenvironment and the immune system, how the genes we inherit affect our risk, and why treatment works for some people but not others. I'm now widening this to a more systems-level view, looking at how the whole body responds to disease, infection and other stresses.",
   ],
 };
 
