@@ -1,8 +1,11 @@
 ---
 // Small looping illustration for a research card. Purely decorative.
-//   clusters  — scattered cells settle into cell-type clusters (single-cell maps)
-//   evolution — a mutant clone spreads, then a subclone takes over (clonal evolution)
-//   tree      — patients flow down a decision tree into subgroups (stratification)
+//   clusters  — cells settle into cell-type clusters, then shift from healthy to disease;
+//               proportion bars below compare the two states
+//   evolution — a clone spreads, two subclones (green, red) compete inside it;
+//               a fish plot below builds up over time from the same cells
+//   tree      — patients flow down a decision tree into subgroups;
+//               bar charts below show each group's response to three compounds
 interface Props { kind: 'clusters' | 'evolution' | 'tree' }
 const { kind } = Astro.props;
 ---
@@ -12,15 +15,22 @@ const { kind } = Astro.props;
 
 <script>
   type Ctx = CanvasRenderingContext2D;
-  type Scene = { draw: (ctx: Ctx, w: number, h: number, t: number, dt: number) => void; still: number };
+  type Scene = { draw: (ctx: Ctx, w: number, h: number, t: number) => void; still: number };
 
-  const PALETTE = ['#f28e2b', '#4e79a7', '#59a14f', '#e15759', '#b07aa1', '#76b7b2'];
+  const C = { orange: '#f28e2b', blue: '#4e79a7', green: '#59a14f', red: '#e15759', purple: '#b07aa1', teal: '#76b7b2', yellow: '#e9b949' };
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const css = (name: string, fallback: string) =>
     getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
-  let theme = { muted: '#66727e', border: '#e2e7ed', text: '#17212b' };
-  const readTheme = () => (theme = { muted: css('--muted', theme.muted), border: css('--border', theme.border), text: css('--text', theme.text) });
+  let theme = { muted: '#66727e', border: '#e2e7ed', text: '#17212b', soft: '#3b4752', font: 'sans-serif' };
+  const readTheme = () =>
+    (theme = {
+      muted: css('--muted', theme.muted),
+      border: css('--border', theme.border),
+      text: css('--text', theme.text),
+      soft: css('--text-soft', theme.soft),
+      font: getComputedStyle(document.body).fontFamily || 'sans-serif',
+    });
   readTheme();
 
   function rng(seed: number) {
@@ -35,6 +45,7 @@ const { kind } = Astro.props;
   const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
   function dot(ctx: Ctx, x: number, y: number, r: number, color: string, alpha = 1) {
+    if (alpha <= 0) return;
     ctx.globalAlpha = alpha;
     ctx.fillStyle = color;
     ctx.beginPath();
@@ -43,87 +54,197 @@ const { kind } = Astro.props;
     ctx.globalAlpha = 1;
   }
 
-  // 1. Scattered cells settle into clusters, hold, then scatter again.
+  function label(ctx: Ctx, text: string, x: number, y: number, opts: { size?: number; color?: string; align?: CanvasTextAlign; weight?: number } = {}) {
+    ctx.font = `${opts.weight ?? 500} ${opts.size ?? 10}px ${theme.font}`;
+    ctx.fillStyle = opts.color ?? theme.muted;
+    ctx.textAlign = opts.align ?? 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x, y);
+  }
+
+  function roundRect(ctx: Ctx, x: number, y: number, w: number, h: number, r: number) {
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
+
+  // 1. Cells settle into clusters (healthy), then one population expands (disease).
   function clusters(): Scene {
     const r = rng(7), g = () => { let u = 0, v = 0; while (!u) u = r(); while (!v) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
-    const centres = [[0.22, 0.32], [0.62, 0.26], [0.34, 0.72], [0.78, 0.66]];
-    const pts = Array.from({ length: 120 }, (_, i) => {
-      const c = i % centres.length;
-      return { c, sx: 0.05 + r() * 0.9, sy: 0.08 + r() * 0.84, tx: centres[c][0] + g() * 0.06, ty: centres[c][1] + g() * 0.08, d: r() * 0.7 };
+    const colors = [C.blue, C.orange, C.green, C.purple];
+    const names = ['Monocytes', 'Neutrophils', 'Erythroid', 'Lymphoid'];
+    const centres = [[0.24, 0.3], [0.66, 0.24], [0.34, 0.74], [0.78, 0.7]];
+    const healthy = [30, 30, 30, 30];
+    const disease = [62, 20, 22, 16];
+    const sample = (c: number) => [centres[c][0] + g() * (c === 0 ? 0.075 : 0.06), centres[c][1] + g() * 0.085];
+    // pair cells: keep type where possible, move the surplus into the expanding population
+    const pts: { sx: number; sy: number; hc: number; dc: number; hx: number; hy: number; dx: number; dy: number; d: number }[] = [];
+    const movers: number[] = [];
+    healthy.forEach((n, c) => {
+      for (let i = 0; i < n; i++) {
+        const [hx, hy] = sample(c);
+        const stays = i < Math.min(n, disease[c]);
+        const p = { sx: 0.05 + r() * 0.9, sy: 0.06 + r() * 0.88, hc: c, dc: c, hx, hy, dx: hx + g() * 0.01, dy: hy + g() * 0.01, d: r() * 0.6 };
+        if (!stays) movers.push(pts.length);
+        pts.push(p);
+      }
     });
-    const P = 7;
+    movers.forEach((idx) => { const [dx, dy] = sample(0); Object.assign(pts[idx], { dc: 0, dx, dy }); });
+
+    const P = 11;
     return {
-      still: 4,
+      still: 7.2,
       draw(ctx, w, h, t) {
         const s = t % P;
+        const plotH = h * 0.64;
+        const form = (p: { d: number }) => ease(clamp01((s - 0.7 - p.d) / 1.6));
+        const shift = (p: { d: number }) => ease(clamp01((s - 4.6 - p.d * 0.5) / 1.6));
+        const out = (p: { d: number }) => ease(clamp01((s - 9.3 - p.d * 0.4) / 1.3));
         for (const p of pts) {
-          const k = ease(clamp01((s - 0.8 - p.d) / 1.6)) * (1 - ease(clamp01((s - 5.3 - p.d * 0.5) / 1.4)));
-          const breathe = Math.sin(t * 1.3 + p.d * 9) * 0.006 * k;
-          const x = (p.sx + (p.tx - p.sx) * k + breathe) * w;
-          const y = (p.sy + (p.ty - p.sy) * k + breathe) * h;
-          dot(ctx, x, y, 2.6, theme.muted, 0.45 * (1 - k));
-          dot(ctx, x, y, 2.6, PALETTE[[1, 0, 2, 4][p.c]], 0.9 * k);
+          const k = form(p) * (1 - out(p)), m = shift(p);
+          const tx = p.hx + (p.dx - p.hx) * m, ty = p.hy + (p.dy - p.hy) * m;
+          const breathe = Math.sin(t * 1.3 + p.d * 9) * 0.005 * k;
+          const x = (p.sx + (tx - p.sx) * k + breathe) * w;
+          const y = (p.sy + (ty - p.sy) * k + breathe) * plotH;
+          const col = m > 0.5 ? colors[p.dc] : colors[p.hc];
+          dot(ctx, x, y, 2.4, theme.muted, 0.4 * (1 - k));
+          dot(ctx, x, y, 2.4, col, 0.9 * k);
         }
+
+        // proportion bars
+        const fadeOut = 1 - ease(clamp01((s - 9.3) / 1.3));
+        const fillH = ease(clamp01((s - 1.2) / 1.6)) * fadeOut;
+        const fillD = ease(clamp01((s - 5.0) / 1.6)) * fadeOut;
+        const x0 = w * 0.25, bw = w * 0.71, bh = Math.max(9, h * 0.07);
+        const rows: [string, number[], number, boolean][] = [
+          ['Healthy', healthy, fillH, s < 4.9],
+          ['Disease', disease, fillD, s >= 4.9 && s < 9.3],
+        ];
+        rows.forEach(([name, counts, fill, active], i) => {
+          const y = h * (0.75 + i * 0.13);
+          label(ctx, name, w * 0.04, y + bh / 2, { size: 10.5, color: active ? theme.text : theme.muted, weight: active ? 650 : 500 });
+          ctx.fillStyle = theme.border;
+          roundRect(ctx, x0, y, bw, bh, 3); ctx.fill();
+          const total = counts.reduce((a, b) => a + b, 0);
+          ctx.save();
+          roundRect(ctx, x0, y, bw * fill, bh, 3); ctx.clip();
+          let x = x0;
+          counts.forEach((n, c) => { const segW = (n / total) * bw; ctx.fillStyle = colors[c]; ctx.fillRect(x, y, segW + 0.5, bh); x += segW; });
+          ctx.restore();
+        });
+        // tiny legend for the expanding population
+        if (fillD > 0.6) label(ctx, `${names[0]} ↑`, w * 0.96, h * 0.7, { size: 9.5, color: colors[0], align: 'right', weight: 650 });
       },
     };
   }
 
-  // 2. A mutant clone appears and spreads; a more aggressive subclone emerges inside it.
+  // 2. A clone (yellow) spreads; green and red subclones compete inside it. Fish plot below.
   function evolution(): Scene {
     const r = rng(11);
-    const cols = 19, rows = 9;
-    const pts: { x: number; y: number; tA: number; tB: number }[] = [];
-    const seedA = [0.26, 0.55], seedB = [0.42, 0.42];
+    const cols = 19, rows = 7;
+    const P = 11.5, fade = 1.2, tEnd = P - fade;
+    const seedA = [0.24, 0.5], seedG = [0.36, 0.25], seedR = [0.4, 0.78];
+    type Cell = { x: number; y: number; tA: number; tG: number; tR: number };
+    const cells: Cell[] = [];
     for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
-      const x = 0.05 + (i + (j % 2) * 0.5) / (cols - 0.5) * 0.9 + (r() - 0.5) * 0.012;
-      const y = 0.1 + (j / (rows - 1)) * 0.8 + (r() - 0.5) * 0.02;
-      const dA = Math.hypot((x - seedA[0]) * 2, y - seedA[1]);
-      const dB = Math.hypot((x - seedB[0]) * 2, y - seedB[1]);
-      pts.push({ x, y, tA: 0.6 + dA * 2.6 + r() * 0.5, tB: 3.8 + dB * 2.4 + r() * 0.5 });
+      const x = 0.04 + (i + (j % 2) * 0.5) / (cols - 0.5) * 0.92 + (r() - 0.5) * 0.01;
+      const y = j / (rows - 1) + (r() - 0.5) * 0.02;
+      const d = (s: number[]) => Math.hypot((x - s[0]) * 2, (y - s[1]) * 0.55);
+      const tA = 0.5 + d(seedA) * 2.4 + r() * 0.4;
+      cells.push({
+        x, y, tA,
+        tG: Math.max(2.6 + d(seedG) * 1.7 + r() * 0.35, tA + 0.4), // green spreads fast...
+        tR: Math.max(4.0 + d(seedR) * 7.5 + r() * 0.35, tA + 0.4), // ...red starts later and gains ground; green holds ~20%
+      });
     }
-    const P = 10.5, fade = 1.1;
+    const state = (c: Cell, s: number) => (s >= c.tR ? 3 : s >= c.tG ? 2 : s >= c.tA ? 1 : 0);
+    // fish plot samples from the same cells
+    const N = 90;
+    const fish = Array.from({ length: N }, (_, i) => {
+      const s = (i / (N - 1)) * tEnd;
+      let a = 0, gr = 0, rd = 0;
+      for (const c of cells) { const st = state(c, s); if (st >= 1) a++; if (st === 2) gr++; if (st === 3) rd++; }
+      return { a: a / cells.length, g: gr / cells.length, r: rd / cells.length };
+    });
+    const colorOf = [null, C.yellow, C.green, C.red] as const;
+
     return {
-      still: 6.2,
+      still: tEnd - 0.05,
       draw(ctx, w, h, t) {
         const s = t % P;
-        const out = clamp01((s - (P - fade)) / fade);
-        const rad = Math.max(2.4, Math.min(3.6, w / 110));
-        for (const p of pts) {
-          let color = theme.muted, alpha = 0.35, since = -1;
-          if (s >= p.tB) { color = PALETTE[3]; alpha = 0.95; since = s - p.tB; }
-          else if (s >= p.tA) { color = PALETTE[0]; alpha = 0.9; since = s - p.tA; }
-          const pulse = since >= 0 ? 1 + 0.9 * Math.exp(-since * 5) : 1;
-          const x = p.x * w, y = p.y * h;
-          if (out > 0 && since >= 0) {
-            dot(ctx, x, y, rad, theme.muted, 0.35 * out);
-            dot(ctx, x, y, rad, color, alpha * (1 - out));
-          } else {
-            dot(ctx, x, y, rad * pulse, color, alpha);
-          }
+        const out = clamp01((s - tEnd) / fade);
+        const gy0 = h * 0.06, gy1 = h * 0.52;
+        const rad = Math.max(2.2, Math.min(3.4, w / 115));
+        for (const c of cells) {
+          const st = state(c, s);
+          const x = c.x * w, y = gy0 + c.y * (gy1 - gy0);
+          if (st === 0) { dot(ctx, x, y, rad, theme.muted, 0.35); continue; }
+          const since = s - (st === 3 ? c.tR : st === 2 ? c.tG : c.tA);
+          const pulse = out > 0 ? 1 : 1 + 0.8 * Math.exp(-since * 5);
+          dot(ctx, x, y, rad, theme.muted, 0.35 * out);
+          dot(ctx, x, y, rad * pulse, colorOf[st]!, 0.92 * (1 - out));
         }
+
+        // fish plot: grows left to right with time
+        const fx0 = w * 0.04, fx1 = w * 0.96, fy0 = h * 0.62, fy1 = h * 0.95, cy = (fy0 + fy1) / 2, fh = fy1 - fy0;
+        ctx.fillStyle = theme.border;
+        ctx.globalAlpha = 0.55;
+        roundRect(ctx, fx0, fy0, fx1 - fx0, fh, 6); ctx.fill();
+        ctx.globalAlpha = 1;
+        const upto = Math.min(N - 1, Math.floor((Math.min(s, tEnd) / tEnd) * (N - 1)));
+        const X = (i: number) => fx0 + (i / (N - 1)) * (fx1 - fx0);
+        const band = (top: (f: (typeof fish)[number]) => number, bottom: (f: (typeof fish)[number]) => number, color: string) => {
+          if (upto < 1) return;
+          ctx.beginPath();
+          for (let i = 0; i <= upto; i++) ctx.lineTo(X(i), top(fish[i]));
+          for (let i = upto; i >= 0; i--) ctx.lineTo(X(i), bottom(fish[i]));
+          ctx.closePath();
+          ctx.globalAlpha = 0.9 * (1 - out);
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        };
+        const H = fh * 0.88;
+        const topA = (f: (typeof fish)[number]) => cy - (f.a * H) / 2;
+        const yG0 = (f: (typeof fish)[number]) => topA(f) + ((f.a - f.g - f.r) * H) / 2;
+        const yG1 = (f: (typeof fish)[number]) => yG0(f) + f.g * H;
+        const yR1 = (f: (typeof fish)[number]) => yG1(f) + f.r * H;
+        band(topA, (f) => cy + (f.a * H) / 2, C.yellow);
+        band(yG0, yG1, C.green);
+        band(yG1, yR1, C.red);
+        // time cursor
+        if (out === 0 && upto > 0) {
+          ctx.strokeStyle = theme.text; ctx.globalAlpha = 0.35; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(X(upto), fy0 + 3); ctx.lineTo(X(upto), fy1 - 3); ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+        label(ctx, 'time →', fx0 + 6, fy1 - 7, { size: 9 });
       },
     };
   }
 
-  // 3. Patients flow down a decision tree and collect in colour-coded subgroups.
+  // 3. Patients flow down a decision tree into subgroups; each group responds differently to compounds.
   function tree(): Scene {
     const r = rng(23);
-    const root = [0.5, 0.1];
-    const mid = [[0.29, 0.4], [0.71, 0.4]];
-    const leaves = [[0.13, 0.68], [0.41, 0.68], [0.59, 0.68], [0.87, 0.68]];
-    const colors = [PALETTE[1], PALETTE[0], PALETTE[2], PALETTE[4]];
+    const root = [0.5, 0.07];
+    const mid = [[0.29, 0.27], [0.71, 0.27]];
+    const leaves = [[0.13, 0.46], [0.38, 0.46], [0.62, 0.46], [0.87, 0.46]];
+    const colors = [C.blue, C.orange, C.green, C.purple];
+    // response to compounds A, B, C for each group (0–1)
+    const response = [[0.9, 0.25, 0.4], [0.2, 0.85, 0.45], [0.5, 0.3, 0.92], [0.3, 0.6, 0.2]];
     type Mover = { leaf: number; born: number; jx: number };
     type Settled = { leaf: number; x: number; y: number; born: number };
     let movers: Mover[] = [];
     const piles: Settled[][] = leaves.map(() => []);
     let nextSpawn = 0;
-    const travel = 1.7, maxPile = 16;
-    const pileSpot = (leaf: number, n: number) => {
-      const col = n % 4, row = Math.floor(n / 4);
-      return [leaves[leaf][0] + (col - 1.5) * 0.024 + (r() - 0.5) * 0.006, 0.8 + row * 0.055];
-    };
-    // start with partly filled piles so the scene is never empty
-    leaves.forEach((_, l) => { for (let n = 0; n < 6 + l; n++) { const [x, y] = pileSpot(l, n); piles[l].push({ leaf: l, x, y, born: -10 }); } });
+    const travel = 1.6, maxPile = 8;
+    const pileSpot = (leaf: number, n: number) => [leaves[leaf][0] + ((n % 4) - 1.5) * 0.026, 0.535 + Math.floor(n / 4) * 0.05];
+    leaves.forEach((_, l) => { for (let n = 0; n < 5 + (l % 2) * 2; n++) { const [x, y] = pileSpot(l, n); piles[l].push({ leaf: l, x, y, born: -10 }); } });
     const pos = (m: Mover, k: number): [number, number] => {
       const a = mid[m.leaf < 2 ? 0 : 1], b = leaves[m.leaf];
       if (k < 0.5) { const e = ease(k * 2); return [root[0] + (a[0] - root[0]) * e, root[1] + (a[1] - root[1]) * e]; }
@@ -132,7 +253,6 @@ const { kind } = Astro.props;
     return {
       still: 0,
       draw(ctx, w, h, t) {
-        // branches
         ctx.strokeStyle = theme.border;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -148,8 +268,8 @@ const { kind } = Astro.props;
         if (!reduced) {
           if (t >= nextSpawn) {
             const u = r();
-            movers.push({ leaf: u < 0.3 ? 0 : u < 0.55 ? 1 : u < 0.8 ? 2 : 3, born: t, jx: (r() - 0.5) * 0.01 });
-            nextSpawn = t + 0.32 + r() * 0.2;
+            movers.push({ leaf: u < 0.28 ? 0 : u < 0.52 ? 1 : u < 0.78 ? 2 : 3, born: t, jx: (r() - 0.5) * 0.01 });
+            nextSpawn = t + 0.34 + r() * 0.2;
           }
           movers = movers.filter((m) => {
             const k = (t - m.born) / travel;
@@ -162,15 +282,34 @@ const { kind } = Astro.props;
               return false;
             }
             const [x, y] = pos(m, k);
-            const c = k < 0.5 ? theme.muted : colors[m.leaf];
-            dot(ctx, (x + m.jx) * w, y * h, 2.8, c, k < 0.5 ? 0.7 : 0.95);
+            dot(ctx, (x + m.jx) * w, y * h, 2.6, k < 0.5 ? theme.muted : colors[m.leaf], k < 0.5 ? 0.7 : 0.95);
             return true;
           });
         }
         for (const pile of piles) for (const p of pile) {
           const pop = clamp01((t - p.born) / 0.25);
-          dot(ctx, p.x * w, p.y * h, 2.6 * (0.6 + 0.4 * pop), colors[p.leaf], 0.9);
+          dot(ctx, p.x * w, p.y * h, 2.4 * (0.6 + 0.4 * pop), colors[p.leaf], 0.9);
         }
+
+        // compound response bars under each group
+        const base = h * 0.9, maxH = h * 0.2, bw = Math.max(5, w * 0.032), gap = Math.max(2, w * 0.008);
+        const grow = reduced ? 1 : ease(clamp01(t / 2));
+        ctx.strokeStyle = theme.border; ctx.lineWidth = 1;
+        leaves.forEach((l, gi) => {
+          const cx = l[0] * w, x0 = cx - (3 * bw + 2 * gap) / 2;
+          ctx.beginPath(); ctx.moveTo(x0 - 3, base + 0.5); ctx.lineTo(x0 + 3 * bw + 2 * gap + 3, base + 0.5); ctx.stroke();
+          response[gi].forEach((v, ci) => {
+            const wobble = reduced ? 1 : 0.9 + 0.1 * Math.sin(t * 1.6 + gi * 1.7 + ci * 2.1);
+            const bh = Math.max(1, v * maxH * grow * wobble);
+            const x = x0 + ci * (bw + gap);
+            ctx.globalAlpha = [1, 0.7, 0.45][ci];
+            ctx.fillStyle = colors[gi];
+            roundRect(ctx, x, base - bh, bw, bh, 2); ctx.fill();
+            ctx.globalAlpha = 1;
+            label(ctx, 'ABC'[ci], x + bw / 2, base + 8, { size: 8.5, align: 'center' });
+          });
+        });
+        label(ctx, 'Response to compounds A–C', w * 0.5, h * 0.645, { size: 9, align: 'center' });
       },
     };
   }
@@ -184,11 +323,11 @@ const { kind } = Astro.props;
     const ctx = canvas.getContext('2d')!;
     let w = 0, h = 0, visible = false, raf = 0, t = scene.still, last = 0;
 
-    const render = (dt = 0) => {
+    const render = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
-      scene.draw(ctx, w, h, t, dt);
+      scene.draw(ctx, w, h, t);
     };
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
@@ -198,9 +337,9 @@ const { kind } = Astro.props;
       render();
     };
     const loop = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now; t += dt;
-      render(dt);
+      t += Math.min(0.05, (now - last) / 1000);
+      last = now;
+      render();
       if (visible) raf = requestAnimationFrame(loop);
     };
     const start = () => { if (reduced || raf) return; last = performance.now(); raf = requestAnimationFrame(loop); };
@@ -226,6 +365,6 @@ const { kind } = Astro.props;
   canvas {
     display: block;
     width: 100%;
-    aspect-ratio: 2 / 1;
+    aspect-ratio: 4 / 3;
   }
 </style>

@@ -38,7 +38,6 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
     </div>
 
     <div class="hero__text">
-      <h2 class="hero__about serif">About me</h2>
       <p class="hero__statement">{intro.statement}</p>
       <div class="hero__lead">
         {intro.summary.map((para) => <p>{para}</p>)}
@@ -71,16 +70,6 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
     </div>
   </section>
 
-  <section class="section container reveal" aria-labelledby="selected">
-    <h2 class="section-title" id="selected">
-      Selected publications
-      <a href={url('publications/')}>All {pubs.length} papers →</a>
-    </h2>
-    <div class="pub-list">
-      {featured.map((p) => <PubCard pub={p} />)}
-    </div>
-  </section>
-
   <section class="section container reveal">
     <div class="two-col">
       <div>
@@ -99,6 +88,16 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
   <section class="section container reveal" aria-labelledby="experience">
     <h2 class="section-title" id="experience">Experience</h2>
     <ExperienceList items={experience} />
+  </section>
+
+  <section class="section container reveal" aria-labelledby="selected">
+    <h2 class="section-title" id="selected">
+      Selected publications
+      <a href={url('publications/')}>All {pubs.length} papers →</a>
+    </h2>
+    <div class="pub-list">
+      {featured.map((p) => <PubCard pub={p} />)}
+    </div>
   </section>
 
   <section class="section container reveal" aria-labelledby="tutorials">
@@ -177,14 +176,6 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
   }
 
   .hero__role { margin: 0.4rem 0 0; font-size: 0.93rem; color: var(--muted); }
-
-  .hero__about {
-    margin: 0;
-    font-size: clamp(2.1rem, 4.2vw, 3rem);
-    font-weight: 700;
-    line-height: 1.08;
-    letter-spacing: -0.02em;
-  }
 
   .hero__statement {
     max-width: 30em;
