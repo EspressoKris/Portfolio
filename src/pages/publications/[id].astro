@@ -44,8 +44,6 @@ const citation = `${plainAuthors} (${year}). ${d.title}. ${d.venue}${d.volume ? 
       <button class="btn btn--ghost" type="button" data-copy={citation}><Icon name="quote" /> <span>Copy citation</span></button>
     </p>
 
-    {d.excerpt && <p class="paper__excerpt">{d.excerpt}</p>}
-
     {d.image && (
       <figure class="paper__figure">
         <a href={d.image.src}>
@@ -141,14 +139,6 @@ const citation = `${plainAuthors} (${year}). ${d.title}. ${d.venue}${d.volume ? 
 
   .paper__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1.5rem; }
 
-  .paper__excerpt {
-    margin: 0 0 1.5rem;
-    padding: 1rem 1.2rem;
-    font-size: 1.02rem;
-    color: var(--text-soft);
-    background: var(--accent-soft);
-    border-radius: 12px;
-  }
 
   .paper__figure { margin: 0 0 1rem; text-align: center; }
   .paper__figure :global(img) {
