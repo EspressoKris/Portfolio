@@ -5,8 +5,9 @@ import Base from '../layouts/Base.astro';
 import CellMap from '../components/CellMap.astro';
 import PubCard from '../components/PubCard.astro';
 import Timeline from '../components/Timeline.astro';
+import ExperienceList from '../components/ExperienceList.astro';
 import Icon from '../components/Icon.astro';
-import { profile, links, positions, education, awards, research } from '../data/profile';
+import { profile, links, experience, education, awards, research } from '../data/profile';
 import { url } from '../lib/url';
 import profileImg from '../assets/profile.jpeg';
 
@@ -17,22 +18,27 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
 ---
 <Base>
   <section class="hero container">
-    <div class="hero__intro">
-      <div class="hero__person">
-        <Image src={profileImg} alt={profile.name} width={96} height={96} class="hero__photo" loading="eager" />
-        <div>
-          <p class="hero__name">{profile.title}</p>
-          <p class="hero__role">{profile.role} · {profile.employer}</p>
-        </div>
-      </div>
+    <div class="hero__photo-wrap">
+      <Image
+        src={profileImg}
+        alt={`Portrait of ${profile.name}`}
+        widths={[320, 480, 720]}
+        sizes="(max-width: 760px) 220px, 360px"
+        class="hero__photo"
+        loading="eager"
+        fetchpriority="high"
+      />
+    </div>
 
+    <div class="hero__text">
       <p class="eyebrow">Computational biology · Haemato-oncology</p>
-      <h1 class="hero__title serif">
+      <h1 class="hero__name serif">{profile.title}</h1>
+      <p class="hero__role">{profile.role} · {profile.employer}</p>
+      <p class="hero__statement">
         I use single-cell and multi-omic data to understand how myeloid leukaemias evolve and respond to treatment.
-      </h1>
+      </p>
       <p class="hero__lead">
-        I'm a postdoctoral computational biologist at the
-        <a href="https://www.imm.ox.ac.uk/">MRC Weatherall Institute of Molecular Medicine</a>, University of Oxford.
+        I'm based at the <a href="https://www.imm.ox.ac.uk/">MRC Weatherall Institute of Molecular Medicine</a> in Oxford.
         I trained first as a wet-lab scientist in leukaemia stem cell biology, then moved into computational work during
         my PhD at the Cancer Research UK Manchester Institute.
       </p>
@@ -49,10 +55,6 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
         ))}
       </ul>
     </div>
-
-    <div class="hero__visual">
-      <CellMap />
-    </div>
   </section>
 
   <section class="section container reveal" aria-labelledby="research">
@@ -66,6 +68,31 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
         </div>
       ))}
     </div>
+  </section>
+
+  <section class="section container reveal" aria-labelledby="explore">
+    <div class="explore">
+      <div class="explore__text">
+        <p class="eyebrow">Explore</p>
+        <h2 id="explore" class="explore__title">What a single-cell map shows</h2>
+        <p>
+          Each dot is one cell from a bone marrow sample. Cells with similar gene activity sit close together, so the map
+          traces how stem cells mature into the different blood cell types.
+        </p>
+        <p>
+          Switch to <strong>CMML</strong> to see what this kind of leukaemia does: monocytes take over, other lineages
+          shrink and immature leukaemic blasts appear. Hover over the cells, or tap the legend, to pick out a cell type.
+        </p>
+      </div>
+      <div class="explore__map">
+        <CellMap />
+      </div>
+    </div>
+  </section>
+
+  <section class="section container reveal" aria-labelledby="experience">
+    <h2 class="section-title" id="experience">Experience</h2>
+    <ExperienceList items={experience} />
   </section>
 
   <section class="section container reveal" aria-labelledby="selected">
@@ -97,21 +124,16 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
   <section class="section container reveal">
     <div class="two-col">
       <div>
-        <h2 class="section-title">Experience</h2>
-        <Timeline items={positions} />
-      </div>
-      <div>
         <h2 class="section-title">Education</h2>
         <Timeline items={education} />
       </div>
+      <div>
+        <h2 class="section-title">Keywords across my papers</h2>
+        <figure class="wordcloud">
+          <img src={url('images/wordcloud.png')} alt="Word cloud of keywords from my publications, including leukemia, CMML, stem cells and scRNA-seq" loading="lazy" width="1194" height="404" />
+        </figure>
+      </div>
     </div>
-  </section>
-
-  <section class="section container reveal" aria-labelledby="keywords">
-    <h2 class="section-title" id="keywords">Keywords across my papers</h2>
-    <figure class="wordcloud">
-      <img src={url('images/wordcloud.png')} alt="Word cloud of keywords from my publications, including leukemia, CMML, stem cells and scRNA-seq" loading="lazy" width="1194" height="404" />
-    </figure>
   </section>
 </Base>
 
@@ -119,42 +141,79 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
   .hero {
     display: grid;
     grid-template-columns: 1fr;
-    gap: clamp(2rem, 4vw, 3.5rem);
+    gap: clamp(1.75rem, 4vw, 4rem);
     align-items: center;
-    padding-top: clamp(2rem, 6vw, 4rem);
+    padding-top: clamp(2rem, 6vw, 4.5rem);
   }
 
-  @media (min-width: 960px) {
-    .hero { grid-template-columns: 1.05fr 1fr; }
+  @media (min-width: 760px) {
+    .hero { grid-template-columns: minmax(240px, 360px) 1fr; }
   }
 
-  .hero__person {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.6rem;
+  .hero__photo-wrap {
+    position: relative;
+    width: min(220px, 60vw);
+    isolation: isolate;
   }
 
-  .hero__person :global(.hero__photo) {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
+  @media (min-width: 760px) { .hero__photo-wrap { width: 100%; } }
+
+  /* soft offset block behind the photo */
+  .hero__photo-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(135deg, var(--accent), var(--link));
+    border-radius: 28px;
+    opacity: 0.18;
+    transform: translate(14px, 14px) rotate(2deg);
+  }
+
+  .hero__photo-wrap :global(.hero__photo) {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
     object-fit: cover;
-    box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--border);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
   }
 
-  .hero__name { margin: 0; font-weight: 700; }
-  .hero__role { margin: 0; font-size: 0.88rem; color: var(--muted); }
-
-  .hero__title {
-    margin: 0 0 1rem;
-    font-size: clamp(1.9rem, 3.6vw, 2.6rem);
+  .hero__name {
+    margin: 0;
+    font-size: clamp(2.2rem, 4.5vw, 3.2rem);
     font-weight: 700;
-    line-height: 1.18;
+    line-height: 1.08;
     letter-spacing: -0.02em;
   }
 
-  .hero__lead { max-width: 38em; margin: 0; font-size: 1.05rem; color: var(--text-soft); }
+  .hero__role { margin: 0.5rem 0 0; font-size: 0.98rem; color: var(--muted); }
+
+  .hero__statement {
+    max-width: 30em;
+    margin: 1.3rem 0 0.9rem;
+    font-family: var(--font-serif);
+    font-size: clamp(1.25rem, 2.2vw, 1.55rem);
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--text);
+  }
+
+  .hero__lead { max-width: 40em; margin: 0; font-size: 1.02rem; color: var(--text-soft); }
+
+  .explore {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem 3rem;
+    align-items: center;
+  }
+
+  @media (min-width: 900px) { .explore { grid-template-columns: 0.8fr 1.2fr; } }
+
+  .explore__title { margin: 0 0 0.8rem; font-size: 1.45rem; }
+  .explore__text p { margin: 0 0 0.9rem; color: var(--text-soft); }
+  .explore__text strong { color: var(--text); }
 
   .highlights {
     display: flex;

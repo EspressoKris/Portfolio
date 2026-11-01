@@ -1,0 +1,140 @@
+---
+// One row per role: dates and place on the left; title, plain-language summary
+// and links to the key papers on the right.
+import { getCollection } from 'astro:content';
+import Icon from './Icon.astro';
+import type { ExperienceItem } from '../data/profile';
+import { url } from '../lib/url';
+
+interface Props { items: ExperienceItem[] }
+const { items } = Astro.props;
+
+const pubs = new Map((await getCollection('publications')).map((p) => [p.id, p]));
+for (const item of items) {
+  for (const id of item.papers ?? []) {
+    if (!pubs.has(id)) throw new Error(`profile.ts: experience "${item.title}" links to unknown paper "${id}"`);
+  }
+}
+const shortTitle = (t: string) => (t.length > 78 ? t.slice(0, 76).replace(/\s+\S*$/, '') + '…' : t);
+---
+<ol class="xp">
+  {items.map((item) => (
+    <li class="xp__row">
+      <div class="xp__when">
+        <span class="xp__dates">{item.dates}</span>
+        <span class="xp__place">{item.place}</span>
+      </div>
+      <div class="xp__what">
+        <h3 class="xp__title">{item.title}</h3>
+        <p class="xp__org">{item.org}</p>
+        <p class="xp__summary">{item.summary}</p>
+
+        {(item.papers?.length || item.links?.length) && (
+          <ul class="xp__refs" aria-label="Key work">
+            {item.papers?.map((id) => {
+              const p = pubs.get(id)!;
+              return (
+                <li>
+                  <a class="xp__ref" href={url(`publications/${p.id}/`)}>
+                    <span class="xp__ref-meta">
+                      <em>{p.data.venue}</em> · {p.data.date.getFullYear()}
+                      {p.data.role === 'First author' && <span class="badge">First author</span>}
+                    </span>
+                    <span class="xp__ref-title">{shortTitle(p.data.title)}</span>
+                  </a>
+                </li>
+              );
+            })}
+            {item.links?.map((l) => (
+              <li>
+                <a class="xp__ref xp__ref--link" href={l.href.startsWith('http') ? l.href : url(l.href)}>
+                  <Icon name="book" /> <span class="xp__ref-title">{l.label}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </li>
+  ))}
+</ol>
+
+<style>
+  .xp { margin: 0; padding: 0; list-style: none; }
+
+  .xp__row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.4rem 2.5rem;
+    padding: 1.6rem 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .xp__row:first-child { border-top: 0; padding-top: 0.4rem; }
+
+  @media (min-width: 760px) {
+    .xp__row { grid-template-columns: 190px 1fr; }
+  }
+
+  .xp__when { display: flex; flex-wrap: wrap; gap: 0.2rem 0.7rem; align-items: baseline; }
+  @media (min-width: 760px) { .xp__when { flex-direction: column; gap: 0.2rem; } }
+
+  .xp__dates {
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--link);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .xp__place { font-size: 0.85rem; color: var(--muted); }
+
+  .xp__title { margin: 0; font-size: 1.12rem; }
+
+  .xp__org { margin: 0.1rem 0 0.7rem; font-size: 0.92rem; color: var(--muted); }
+
+  .xp__summary { margin: 0; max-width: 46em; color: var(--text-soft); }
+
+  .xp__refs {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 0.6rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .xp__ref {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    height: 100%;
+    padding: 0.7rem 0.85rem;
+    color: inherit;
+    text-decoration: none;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: border-color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+  }
+
+  .xp__ref:hover { border-color: var(--link); background: var(--accent-soft); transform: translateY(-2px); }
+
+  .xp__ref--link { flex-direction: row; align-items: center; gap: 0.55rem; color: var(--link); }
+
+  .xp__ref-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.76rem;
+    color: var(--muted);
+  }
+
+  .xp__ref-meta em { font-weight: 600; color: var(--text); }
+
+  .xp__ref-meta .badge { font-size: 0.7rem; }
+
+  .xp__ref-title { font-size: 0.86rem; font-weight: 500; line-height: 1.4; color: var(--text); }
+  .xp__ref--link .xp__ref-title { color: var(--link); }
+</style>
