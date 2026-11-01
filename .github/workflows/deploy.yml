@@ -37,6 +37,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: EspressoKris/Portfolio-tutorials
+          ref: main  # named so checkout doesn't need API access to the private repo
           path: src/content/docs/tutorials
           ssh-key: ${{ secrets.TUTORIALS_DEPLOY_KEY }}
 
