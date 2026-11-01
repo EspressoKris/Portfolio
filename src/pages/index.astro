@@ -58,15 +58,24 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
   </section>
 
   <section class="section container reveal" aria-labelledby="research">
-    <h2 class="section-title" id="research">Research</h2>
-    <div class="research-grid">
-      {research.map((r) => (
-        <div class="research-card">
-          <ResearchAnim kind={r.anim} />
-          <h3>{r.title}</h3>
-          <p>{r.text}</p>
+    <div class="carousel" data-carousel>
+      <div class="section-title carousel__head">
+        <h2 id="research">Research</h2>
+        <div class="carousel__arrows">
+          <button type="button" class="carousel__btn" data-prev aria-label="Previous research topics">←</button>
+          <button type="button" class="carousel__btn" data-next aria-label="Next research topics">→</button>
         </div>
-      ))}
+      </div>
+      <div class="carousel__track research-grid" data-track tabindex="0" role="region" aria-roledescription="carousel" aria-labelledby="research">
+        {research.map((r, i) => (
+          <div class="research-card" role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${research.length}: ${r.title}`}>
+            <ResearchAnim kind={r.anim} />
+            <h3>{r.title}</h3>
+            <p>{r.text}</p>
+          </div>
+        ))}
+      </div>
+      <div class="carousel__dots" data-dots aria-label="Choose research topics"></div>
     </div>
   </section>
 
@@ -117,6 +126,72 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
   </section>
 
 </Base>
+
+
+<script>
+  // Research carousel: arrows, dots, swipe/scroll, and gentle auto-advance.
+  const root = document.querySelector<HTMLElement>('[data-carousel]');
+  if (root) {
+    const track = root.querySelector<HTMLElement>('[data-track]')!;
+    const dotsEl = root.querySelector<HTMLElement>('[data-dots]')!;
+    const cards = [...track.children] as HTMLElement[];
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const AUTO_MS = 22000; // about two rounds of the animations
+
+    const perView = () => Math.max(1, Math.round(track.clientWidth / cards[0].getBoundingClientRect().width));
+    const pages = () => Math.ceil(cards.length / perView());
+    const current = () => Math.round(track.scrollLeft / track.clientWidth);
+    const goTo = (page: number) => {
+      const n = pages();
+      const p = ((page % n) + n) % n;
+      const card = cards[Math.min(p * perView(), cards.length - 1)];
+      track.scrollTo({ left: card.offsetLeft - track.offsetLeft - 2, behavior: reduced ? 'auto' : 'smooth' });
+    };
+
+    const renderDots = () => {
+      const n = pages();
+      dotsEl.innerHTML = '';
+      for (let i = 0; i < n; i++) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.setAttribute('aria-label', `Show topics ${i * perView() + 1}–${Math.min((i + 1) * perView(), cards.length)}`);
+        b.addEventListener('click', () => { goTo(i); restart(); });
+        dotsEl.appendChild(b);
+      }
+      dotsEl.hidden = n < 2;
+      root.querySelector<HTMLElement>('.carousel__arrows')!.hidden = n < 2;
+      markDot();
+    };
+    const markDot = () => {
+      const c = current();
+      [...dotsEl.children].forEach((d, i) => d.setAttribute('aria-current', String(i === c)));
+    };
+
+    root.querySelector('[data-prev]')!.addEventListener('click', () => { goTo(current() - 1); restart(); });
+    root.querySelector('[data-next]')!.addEventListener('click', () => { goTo(current() + 1); restart(); });
+    track.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') { e.preventDefault(); goTo(current() + 1); restart(); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(current() - 1); restart(); }
+    });
+    let scrollTimer = 0;
+    track.addEventListener('scroll', () => { clearTimeout(scrollTimer); scrollTimer = window.setTimeout(markDot, 80); }, { passive: true });
+
+    // auto-advance only while visible and not being used
+    let timer = 0, paused = false, visible = false;
+    const tick = () => { if (!paused && visible && !document.hidden) goTo(current() + 1); };
+    function restart() { clearInterval(timer); if (!reduced) timer = window.setInterval(tick, AUTO_MS); }
+    root.addEventListener('pointerenter', () => (paused = true));
+    root.addEventListener('pointerleave', () => (paused = false));
+    root.addEventListener('focusin', () => (paused = true));
+    root.addEventListener('focusout', () => (paused = false));
+    track.addEventListener('touchstart', () => restart(), { passive: true });
+    new IntersectionObserver(([e]) => (visible = e.isIntersecting), { threshold: 0.4 }).observe(track);
+
+    new ResizeObserver(renderDots).observe(track);
+    renderDots();
+    restart();
+  }
+</script>
 
 <style>
   .hero {
@@ -230,14 +305,65 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
 
   .hero__links a:hover { color: var(--accent-text); border-color: var(--accent-text); transform: translateY(-2px); }
 
-  .research-grid {
+  /* Research carousel: 3 cards per view on desktop, 2 on tablet, 1 on phone */
+  .carousel__head { align-items: center; }
+  .carousel__head h2 { margin: 0; font-size: inherit; }
+  .carousel__arrows { display: flex; gap: 0.4rem; }
+
+  .carousel__btn {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 1rem;
+    place-items: center;
+    width: 2.3rem;
+    height: 2.3rem;
+    padding: 0;
+    font: inherit;
+    font-size: 1rem;
+    color: var(--text-soft);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
   }
 
-  @media (min-width: 620px) { .research-grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (min-width: 960px) { .research-grid { grid-template-columns: repeat(3, 1fr); } }
+  .carousel__btn:hover { color: var(--accent-text); border-color: var(--accent-text); background: var(--accent-soft); }
+
+  .research-grid {
+    --per-view: 1;
+    --gap: 1rem;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100% - (var(--per-view) - 1) * var(--gap)) / var(--per-view));
+    gap: var(--gap);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    padding: 4px 2px 6px;
+    margin: -4px -2px -6px;
+  }
+
+  .research-grid::-webkit-scrollbar { display: none; }
+  .research-grid > * { scroll-snap-align: start; }
+
+  @media (min-width: 620px) { .research-grid { --per-view: 2; } }
+  @media (min-width: 960px) { .research-grid { --per-view: 3; } }
+
+  .carousel__dots { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
+
+  .carousel__dots :global(button) {
+    width: 0.6rem;
+    height: 0.6rem;
+    padding: 0;
+    background: var(--border);
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: width 0.25s ease, background-color 0.25s ease;
+  }
+
+  .carousel__dots :global(button[aria-current='true']) { width: 1.6rem; background: var(--accent); }
 
   .research-card {
     padding: 1.4rem;
