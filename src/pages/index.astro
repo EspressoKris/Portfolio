@@ -7,7 +7,7 @@ import PubCard from '../components/PubCard.astro';
 import Timeline from '../components/Timeline.astro';
 import ExperienceList from '../components/ExperienceList.astro';
 import Icon from '../components/Icon.astro';
-import { profile, links, experience, education, awards, research } from '../data/profile';
+import { profile, intro, links, experience, education, awards, research } from '../data/profile';
 import { url } from '../lib/url';
 import profileImg from '../assets/profile.jpeg';
 
@@ -34,14 +34,10 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
       <p class="eyebrow">Computational biology · Haemato-oncology</p>
       <h1 class="hero__name serif">{profile.title}</h1>
       <p class="hero__role">{profile.role} · {profile.employer}</p>
-      <p class="hero__statement">
-        I use single-cell and multi-omic data to understand how myeloid leukaemias evolve and respond to treatment.
-      </p>
-      <p class="hero__lead">
-        I'm based at the <a href="https://www.imm.ox.ac.uk/">MRC Weatherall Institute of Molecular Medicine</a> in Oxford.
-        I trained first as a wet-lab scientist in leukaemia stem cell biology, then moved into computational work during
-        my PhD at the Cancer Research UK Manchester Institute.
-      </p>
+      <p class="hero__statement">{intro.statement}</p>
+      <div class="hero__lead">
+        {intro.summary.map((para) => <p>{para}</p>)}
+      </div>
 
       <ul class="highlights">
         <li><strong>{pubs.length}</strong> peer-reviewed papers</li>
@@ -142,7 +138,7 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
     display: grid;
     grid-template-columns: 1fr;
     gap: clamp(1.75rem, 4vw, 4rem);
-    align-items: center;
+    align-items: start;
     padding-top: clamp(2rem, 6vw, 4.5rem);
   }
 
@@ -156,7 +152,7 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
     isolation: isolate;
   }
 
-  @media (min-width: 760px) { .hero__photo-wrap { width: 100%; } }
+  @media (min-width: 760px) { .hero__photo-wrap { width: 100%; position: sticky; top: 96px; } }
 
   /* soft offset block behind the photo */
   .hero__photo-wrap::before {
@@ -200,7 +196,9 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
     color: var(--text);
   }
 
-  .hero__lead { max-width: 40em; margin: 0; font-size: 1.02rem; color: var(--text-soft); }
+  .hero__lead { max-width: 42em; font-size: 1rem; line-height: 1.7; color: var(--text-soft); }
+  .hero__lead p { margin: 0 0 0.85rem; }
+  .hero__lead p:last-child { margin-bottom: 0; }
 
   .explore {
     display: grid;

@@ -10,7 +10,18 @@ export const profile = {
   employer: 'University of Oxford',
   email: 'kristian.gurashi@gmail.com',
   description:
-    'Computational biologist at the University of Oxford working on single-cell and multi-omic analysis of myeloid leukaemia (CMML, MDS, AML).',
+    'Computational biologist with 7+ years in blood cancer research, combining lab science and data science to understand how leukaemias develop and respond to treatment.',
+};
+
+// Homepage intro. `statement` is the large line; `summary` is one paragraph per item.
+export const intro = {
+  statement:
+    'I turn large biological datasets into ideas that can be tested, to understand how blood cancers start, change and respond to treatment.',
+  summary: [
+    "I'm a computational biologist with more than seven years in blood cancer research. I began in the lab and now combine lab science with data science, bringing together many kinds of molecular measurements: from whole tissue samples, from individual cells, and from where cells sit within a tissue. I work in teams of doctors, computer scientists, biologists and statisticians to move discoveries closer to patients.",
+    "Most of my work is on myeloid leukaemias, in children and in older adults. I study how these cancers evolve and become more aggressive, how cells carrying mutations in genes such as TP53 and KIT grow and compete, how leukaemic stem cells interact with the immune system and their surroundings in the bone marrow, what role inherited risk plays, and why some patients respond to treatment while others don't. I'm now bringing the same approach to infectious disease, to understand how the body responds to infections and other stresses.",
+    'What I enjoy most is turning data into hypotheses that can be tested in experiments. I build reliable analysis pipelines, keep data organised and shareable so results can be repeated and scaled up, and use statistics and machine learning (in Python and R) to find markers of disease and possible drug targets.',
+  ],
 };
 
 export const links = [
