@@ -2,6 +2,7 @@
 // One row per role: dates and place on the left; title, plain-language summary
 // and links to the key papers on the right.
 import { getCollection } from 'astro:content';
+import { Image } from 'astro:assets';
 import Icon from './Icon.astro';
 import type { ExperienceItem } from '../data/profile';
 import { url } from '../lib/url';
@@ -24,6 +25,9 @@ const shortTitle = (t: string) => (t.length > 78 ? t.slice(0, 76).replace(/\s+\S
         <span class="xp__dates">{item.dates}</span>
         <span class="xp__place">{item.place}</span>
         {item.label && <span class="xp__label">{item.label}</span>}
+        {item.photo && (
+          <Image src={item.photo} alt={item.photoAlt ?? ''} widths={[200, 400]} sizes="200px" class="xp__photo" loading="lazy" />
+        )}
       </div>
       <div class="xp__what">
         <h3 class="xp__title">{item.title}</h3>
@@ -106,7 +110,8 @@ const shortTitle = (t: string) => (t.length > 78 ? t.slice(0, 76).replace(/\s+\S
   }
 
   .xp__when { display: flex; flex-wrap: wrap; gap: 0.2rem 0.7rem; align-items: baseline; }
-  @media (min-width: 760px) { .xp__when { flex-direction: column; gap: 0.2rem; } }
+  @media (min-width: 760px) { .xp__when { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; gap: 0.2rem; } }
+  @media (max-width: 759px) { .xp__when :global(.xp__photo) { flex-basis: 100%; } }
 
   .xp__dates {
     font-size: 0.82rem;
@@ -117,6 +122,19 @@ const shortTitle = (t: string) => (t.length > 78 ? t.slice(0, 76).replace(/\s+\S
   }
 
   .xp__place { font-size: 0.85rem; color: var(--muted); }
+
+  .xp__when :global(.xp__photo) {
+    flex: none;
+    width: 100%;
+    max-width: 200px;
+    height: auto;
+    aspect-ratio: 3 / 4;
+    margin-top: 0.8rem;
+    object-fit: cover;
+    border-radius: 12px;
+    box-shadow: 0 0 0 1px var(--border), var(--shadow);
+    filter: var(--img-filter);
+  }
 
   .xp__label {
     align-self: flex-start;

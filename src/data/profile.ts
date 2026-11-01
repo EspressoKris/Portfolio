@@ -1,3 +1,5 @@
+import phdPhoto from '../assets/career/phd-manchester.jpg';
+
 // Everything about you that appears around the site.
 // Positions, education and awards are from ORCID 0000-0002-5540-3398.
 
@@ -42,9 +44,13 @@ export type TimelineItem = { title: string; org: string; dates?: string };
 // `papers` are publication file names (without .md) from src/content/publications/.
 // `links` are optional extra links (site paths without a leading slash, or full URLs).
 export type Highlight = { title: string; text: string; tag?: string };
+// `photo` is an optional picture from that time of your career (put it in src/assets/career/,
+//   import it at the top of this file) with `photoAlt` describing it.
 export type ExperienceItem = TimelineItem & {
   place: string;
   label?: string;
+  photo?: ImageMetadata;
+  photoAlt?: string;
   summary: string;
   highlights?: Highlight[];
   papers?: string[];
@@ -124,6 +130,8 @@ export const experience: ExperienceItem[] = [
     org: 'Cancer Research UK Manchester Institute',
     place: 'University of Manchester',
     dates: 'Jan 2019 – Oct 2023',
+    photo: phdPhoto,
+    photoAlt: 'Kristian at his desk at the Cancer Research UK Manchester Institute during his PhD',
     summary:
       'Mostly lab-based, I also generated and analysed single-cell and bulk data on chronic myelomonocytic leukaemia (CMML), a blood cancer that can turn into aggressive acute leukaemia.',
     highlights: [
@@ -218,10 +226,10 @@ export const research: { icon: string; anim: 'clusters' | 'evolution' | 'tree' |
     text: 'Single-cell transcriptomic and multiomic profiling of haematopoietic and leukaemic stem cells to map disease heterogeneity.',
   },
   {
-    icon: 'route',
-    anim: 'evolution',
-    title: 'Leukaemic transformation',
-    text: 'How chronic myeloid neoplasms such as CMML and MDS evolve and transform into acute leukaemia.',
+    icon: 'cells',
+    anim: 'niche',
+    title: 'Cell cross-talk in space',
+    text: 'Single-cell and spatial maps of how leukaemic stem cells talk to the immune and stromal cells around them, and which of those signals drugs can block.',
   },
   {
     icon: 'tree',
@@ -236,22 +244,22 @@ export const research: { icon: string; anim: 'clusters' | 'evolution' | 'tree' |
     text: 'Reading how open the DNA is and which genes are switched on in the same single cells, to find the inherited changes that raise the risk of blood cancer.',
   },
   {
-    icon: 'cells',
-    anim: 'niche',
-    title: 'Cell cross-talk in space',
-    text: 'Single-cell and spatial maps of how leukaemic stem cells talk to the immune and stromal cells around them, and which of those signals drugs can block.',
-  },
-  {
-    icon: 'tree',
-    anim: 'response',
-    title: 'Treatment response',
-    text: 'Following how blood cells mature (differentiate) to pinpoint the gene-activity signature unique to the disease, then using it to predict which patients will respond to treatment.',
+    icon: 'route',
+    anim: 'evolution',
+    title: 'Leukaemic transformation',
+    text: 'How chronic myeloid neoplasms such as CMML and MDS evolve and transform into acute leukaemia.',
   },
   {
     icon: 'cells',
     anim: 'clones',
     title: 'Clones, cell by cell',
     text: 'Reading DNA and proteins one cell at a time to see which mutations sit together in the same cancer cell, something bulk sequencing cannot show.',
+  },
+  {
+    icon: 'tree',
+    anim: 'response',
+    title: 'Treatment response',
+    text: 'Following how blood cells mature (differentiate) to pinpoint the gene-activity signature unique to the disease, then using it to predict which patients will respond to treatment.',
   },
   {
     icon: 'cells',
