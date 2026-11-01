@@ -1,4 +1,5 @@
 import phdPhoto from '../assets/career/phd-manchester.jpg';
+import kclPhoto from '../assets/career/kcl-lab.jpg';
 
 // Everything about you that appears around the site.
 // Positions, education and awards are from ORCID 0000-0002-5540-3398.
@@ -183,6 +184,8 @@ export const experience: ExperienceItem[] = [
     org: 'Randall Centre for Cell & Molecular Biophysics',
     place: "King's College London",
     dates: 'Jan 2018 – Jan 2019',
+    photo: kclPhoto,
+    photoAlt: "Kristian in a lab coat during his time as a research associate at King's College London",
     summary:
       'My MRes project, continued as a research assistant: mostly lab work, with my first steps in computational analysis.',
     highlights: [
