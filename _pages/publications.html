@@ -1,0 +1,29 @@
+---
+layout: archive
+title: "Publications"
+permalink: /publications/
+author_profile: true
+description: "Peer-reviewed publications by Kristian Gurashi on CMML, MDS, myelofibrosis and leukaemic stem cells."
+redirect_from:
+  - /publications-year-archive/
+---
+
+{% include base_path %}
+
+<p class="page-intro">
+  Also on <a href="{{ site.author.googlescholar }}">Google Scholar</a> and <a href="{{ site.author.orcid }}">ORCID</a>.
+</p>
+
+{% assign pubs = site.publications | sort: "date" | reverse %}
+{% assign written_year = "" %}
+{% for post in pubs %}
+  {% assign year = post.date | date: "%Y" %}
+  {% if year != written_year %}
+    {% unless forloop.first %}</div>{% endunless %}
+    <h2 id="y{{ year }}" class="archive__subtitle">{{ year }}</h2>
+    <div class="pub-list">
+    {% assign written_year = year %}
+  {% endif %}
+  {% include pub-card.html %}
+  {% if forloop.last %}</div>{% endif %}
+{% endfor %}

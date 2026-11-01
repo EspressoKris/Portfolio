@@ -1,13 +1,13 @@
-# main links links
+# Top navigation bar
 main:
   - title: "Publications"
-    url: /publications-year-archive/
+    url: /publications/
 
-  - title: "Presentations"
-    url: /talks-year-archive/
+  - title: "CV"
+    url: /cv/
 
   - title: "Blog"
     url: /year-archive/
-        
+
   - title: "Tutorials"
     url: https://espressokris.gitbook.io/tutorials

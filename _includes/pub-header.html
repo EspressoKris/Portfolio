@@ -1,0 +1,24 @@
+{% include base_path %}
+{% comment %}Header block for a single publication page.{% endcomment %}
+<div class="pub-header">
+  <p class="pub-card__meta">
+    <span class="pub-card__venue">{{ page.venue }}</span>
+    <span aria-hidden="true">·</span>
+    <time datetime="{{ page.date | date: '%Y-%m-%d' }}">{{ page.date | date: "%-d %B %Y" }}</time>
+    {% if page.role == "First author" %}<span class="badge">First author</span>{% endif %}
+  </p>
+  {% if page.authors %}
+    <p class="pub-header__authors">{{ page.authors | markdownify | remove: '<p>' | remove: '</p>' | strip }}</p>
+  {% endif %}
+  <p class="pub-header__links">
+    {% if page.paperurl %}<a class="btn btn--primary" href="{{ page.paperurl }}"><i class="fas fa-file-lines" aria-hidden="true"></i> Read the paper</a>{% endif %}
+    {% if page.codeurl %}<a class="btn btn--inverse" href="{{ page.codeurl }}"><i class="fab fa-github" aria-hidden="true"></i> Code</a>{% endif %}
+    <a class="btn btn--inverse" href="#citation"><i class="fas fa-quote-right" aria-hidden="true"></i> Cite</a>
+  </p>
+</div>
+{% if page.image %}
+  <figure class="pub-figure">
+    <a href="{{ base_path }}{{ page.image }}"><img src="{{ base_path }}{{ page.image }}" alt="Graphical abstract for {{ page.title | escape }}"></a>
+    <figcaption>Graphical abstract</figcaption>
+  </figure>
+{% endif %}

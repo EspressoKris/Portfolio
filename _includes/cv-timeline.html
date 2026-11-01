@@ -1,0 +1,9 @@
+<ul class="timeline">
+{% for item in include.items %}
+  <li>
+    {% if item.dates %}<span class="timeline__dates">{{ item.dates }}</span>{% endif %}
+    <span class="timeline__title">{{ item.title }}</span>
+    <span class="timeline__org">{{ item.org }}</span>
+  </li>
+{% endfor %}
+</ul>
