@@ -14,7 +14,6 @@ import profileImg from '../assets/profile.jpeg';
 const pubs = (await getCollection('publications')).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 const featured = pubs.filter((p) => p.data.featured);
 const firstAuthor = pubs.filter((p) => p.data.role === 'First author').length;
-const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('tutorials/')).sort((a, b) => b.id.split('/').length - a.id.split('/').length);
 ---
 <Base>
   <section class="hero container">
@@ -117,11 +116,6 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
         <p>Step-by-step bioinformatics guides, starting with single-cell RNA-seq, written for people who want to run the analysis themselves.</p>
         <a class="btn" href={url('tutorials/')}><Icon name="book" /> Browse tutorials</a>
       </div>
-      <ul class="tutorials-band__list">
-        {tutorials.slice(0, 4).map((t) => (
-          <li><a href={url(`${t.id}/`)}><Icon name="arrow" /> {t.data.title}</a></li>
-        ))}
-      </ul>
     </div>
   </section>
 
@@ -390,24 +384,10 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
     border-radius: 18px;
   }
 
-  @media (min-width: 800px) { .tutorials-band { grid-template-columns: 1.2fr 1fr; align-items: center; } }
 
   .tutorials-band__title { margin: 0 0 0.5rem; font-size: 1.45rem; }
   .tutorials-band p { margin: 0 0 1.2rem; color: var(--text-soft); }
 
-  .tutorials-band__list { margin: 0; padding: 0; list-style: none; }
-  .tutorials-band__list li + li { border-top: 1px solid var(--border); }
-  .tutorials-band__list a {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.75rem 0;
-    font-weight: 500;
-    color: var(--text);
-    text-decoration: none;
-  }
-  .tutorials-band__list a:hover { color: var(--accent-text); }
-  .tutorials-band__list :global(svg) { color: var(--link); flex: none; }
 
   .two-col {
     display: grid;
