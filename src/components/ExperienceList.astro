@@ -23,11 +23,40 @@ const shortTitle = (t: string) => (t.length > 78 ? t.slice(0, 76).replace(/\s+\S
       <div class="xp__when">
         <span class="xp__dates">{item.dates}</span>
         <span class="xp__place">{item.place}</span>
+        {item.label && <span class="xp__label">{item.label}</span>}
       </div>
       <div class="xp__what">
         <h3 class="xp__title">{item.title}</h3>
         <p class="xp__org">{item.org}</p>
         <p class="xp__summary">{item.summary}</p>
+
+        {item.highlights && item.highlights.length > 0 && (
+          <Fragment>
+            <ul class="xp__projects">
+              {item.highlights.slice(0, 2).map((h) => (
+                <li>
+                  <span class="xp__project-title">{h.title}</span>
+                  {h.tag && <span class="xp__tag">{h.tag}</span>}
+                  <span class="xp__project-text">{h.text}</span>
+                </li>
+              ))}
+            </ul>
+            {item.highlights.length > 2 && (
+              <details class="xp__more">
+                <summary>{item.highlights.length - 2} more project{item.highlights.length - 2 > 1 ? 's' : ''}</summary>
+                <ul class="xp__projects">
+                  {item.highlights.slice(2).map((h) => (
+                    <li>
+                      <span class="xp__project-title">{h.title}</span>
+                      {h.tag && <span class="xp__tag">{h.tag}</span>}
+                      <span class="xp__project-text">{h.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </Fragment>
+        )}
 
         {(item.papers?.length || item.links?.length) && (
           <ul class="xp__refs" aria-label="Key work">
@@ -88,6 +117,79 @@ const shortTitle = (t: string) => (t.length > 78 ? t.slice(0, 76).replace(/\s+\S
   }
 
   .xp__place { font-size: 0.85rem; color: var(--muted); }
+
+  .xp__label {
+    align-self: flex-start;
+    padding: 0.05rem 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent-text);
+    background: var(--accent-soft);
+    border-radius: 999px;
+  }
+
+  .xp__projects {
+    display: grid;
+    gap: 0.9rem;
+    margin: 1rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .xp__projects li {
+    position: relative;
+    padding-left: 1.1rem;
+  }
+
+  .xp__projects li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.55em;
+    width: 0.45rem;
+    height: 0.45rem;
+    background: var(--accent);
+    border-radius: 2px;
+    transform: rotate(45deg);
+  }
+
+  .xp__project-title { font-weight: 600; color: var(--text); }
+
+  .xp__tag {
+    display: inline-block;
+    margin-left: 0.45rem;
+    padding: 0.05rem 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    vertical-align: 0.1em;
+    color: var(--link);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .xp__project-text {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.93rem;
+    line-height: 1.55;
+    color: var(--text-soft);
+    max-width: 46em;
+  }
+
+  .xp__more { margin-top: 0.9rem; }
+  .xp__more summary {
+    width: fit-content;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--link);
+    cursor: pointer;
+    list-style: none;
+  }
+  .xp__more summary::-webkit-details-marker { display: none; }
+  .xp__more summary::before { content: '+ '; }
+  .xp__more[open] summary::before { content: '− '; }
+  .xp__more[open] summary { margin-bottom: 0.1rem; }
 
   .xp__title { margin: 0; font-size: 1.12rem; }
 

@@ -35,56 +35,159 @@ export const links = [
 
 export type TimelineItem = { title: string; org: string; dates?: string };
 
-// One row per role on the homepage. `summary` is written for a general reader.
+// One row per role on the homepage, in plain language (source: LinkedIn, Nov 2026).
+// `highlights` are key projects: a short title, one or two sentences, and an optional tag
+//   (talk, poster, award or paper). The first two show; the rest sit behind "more projects".
 // `papers` are publication file names (without .md) from src/content/publications/.
 // `links` are optional extra links (site paths without a leading slash, or full URLs).
+export type Highlight = { title: string; text: string; tag?: string };
 export type ExperienceItem = TimelineItem & {
   place: string;
+  label?: string;
   summary: string;
+  highlights?: Highlight[];
   papers?: string[];
   links?: { label: string; href: string }[];
 };
 
 export const experience: ExperienceItem[] = [
   {
-    title: 'Postdoctoral Researcher, Computational Biology',
+    title: 'Postdoctoral Computational Biologist',
     org: 'MRC Weatherall Institute of Molecular Medicine',
     place: 'University of Oxford',
-    dates: '2024 – present',
+    dates: 'Jan 2024 – present',
     summary:
-      'I analyse large single-cell and multi-omic datasets from blood and bone marrow. The aim is to understand how blood cancers develop, find weak points that new drugs could target, and recognise early the patterns that make some patients resistant to treatment.',
+      'I lead and co-lead projects that study blood cancers cell by cell: reading which genes are active in tens of thousands of individual cells, and mapping where those cells sit inside the bone marrow.',
+    highlights: [
+      {
+        title: 'What keeps a childhood leukaemia alive (co-lead)',
+        text: 'In juvenile myelomonocytic leukaemia (JMML) we found that immune cells in the bone marrow help leukaemic stem cells survive. Blocking that signal with an existing drug, gilteritinib, led to remission in a patient whose disease had stopped responding to treatment.',
+        tag: 'Talk · ASH 2024',
+      },
+      {
+        title: 'Predicting who benefits from luspatercept (lead)',
+        text: 'Luspatercept helps some people with lower-risk MDS stop needing blood transfusions, but there was no way to know in advance who. I found a gene-activity pattern in developing red blood cells that predicts response, confirmed in more than 400 patients.',
+        tag: 'EHA 2025',
+      },
+      {
+        title: 'Seeing which mutations share a cell (co-lead)',
+        text: 'Standard sequencing blends millions of cells together, so it cannot tell whether two TP53 faults sit in the same cancer cell. I wrote software that reads DNA and proteins one cell at a time, revealing complexity that bulk tests miss.',
+        tag: 'Poster · ASH 2024',
+      },
+      {
+        title: 'Inherited DNA behind a blood cancer risk (lead)',
+        text: 'A common inherited version of the JAK2 gene raises the risk of myeloproliferative neoplasms, but the exact DNA changes responsible are unknown. I combined single-cell data with AI models of DNA to narrow down the likely culprits, in a way that works for other risk genes too.',
+      },
+      {
+        title: 'Testing a lab-grown bone marrow',
+        text: 'I showed that a bone marrow "organoid" grown in the lab reproduces the cell types of real adult marrow.',
+        tag: 'Cell Stem Cell 2026',
+      },
+      {
+        title: 'Reusable tools',
+        text: 'Pipelines that turn raw single-cell data into analysis-ready results with one command on the computing cluster, and a statistical method to rank which RNAs the protein PCBP2 binds.',
+      },
+    ],
     links: [{ label: 'How I clean single-cell data (CellBender tutorial)', href: 'tutorials/transcriptomics/single-cell/cellbender/' }],
   },
   {
-    title: 'Research Associate',
-    org: 'Cancer Research UK Manchester Institute',
-    place: 'University of Manchester',
-    dates: '2023 – 2024',
+    title: 'External Bioinformatics Collaborator',
+    org: "King's College London",
+    place: 'Remote',
+    label: 'Voluntary',
+    dates: 'Jan 2025 – present',
     summary:
-      'I completed our study of blast-phase CMML and worked with haematologists at National Taiwan University Hospital on large patient groups, testing which genetic and gene-activity markers predict how people with MDS, CMML and myelofibrosis will fare, and which treatments might work for them.',
-    papers: ['2025-01-31-CRM', '2023-11-02-Leukemia', '2024-07-12-BCJ', '2024-10-04-Leukemia'],
+      'A collaboration I sought out to learn how antibodies are discovered, a field outside my own, working with a former MRes coursemate.',
+    highlights: [
+      {
+        title: 'Matching antibodies to their target (SARS-CoV-2)',
+        text: 'I helped design the experiment and built the analysis for 22,564 immune B cells from seven donors, sorting about 2,500 antibody families by which part of the virus they recognise. Promising antibodies were made and tested in the lab, and the data now help train AI models that design antibodies.',
+      },
+    ],
   },
   {
-    title: 'PhD, Cancer Sciences',
+    title: 'Postdoctoral Research Associate',
     org: 'Cancer Research UK Manchester Institute',
     place: 'University of Manchester',
-    dates: '2019 – 2023',
+    dates: 'Oct 2023 – Jan 2024',
+    summary: 'A short post after my PhD to take our blast-phase CMML study through to publication.',
+    highlights: [
+      {
+        title: 'Sorting an aggressive leukaemia into treatable groups (lead)',
+        text: 'Blast-phase CMML is usually treated like any other acute leukaemia. Combining clinical, laboratory and gene-activity data from 42 patients with machine learning, I found two subtypes that respond to different drugs, confirmed in patient cells, and built a simple classifier to tell them apart.',
+      },
+    ],
+    papers: ['2025-01-31-CRM'],
+  },
+  {
+    title: 'PhD, Cancer Sciences (Predoctoral Fellow)',
+    org: 'Cancer Research UK Manchester Institute',
+    place: 'University of Manchester',
+    dates: 'Jan 2019 – Oct 2023',
     summary:
-      'I studied chronic myelomonocytic leukaemia (CMML), a blood cancer that can suddenly turn into aggressive acute leukaemia. By reading which genes are switched on in individual leukaemia stem cells, and combining this with clinical and laboratory data, I found ways to group patients by how their disease behaves and which drugs it is likely to respond to.',
-    papers: ['2020-08-01-EBM', '2023-04-05-BJH', '2023-06-01-CSC'],
+      'Mostly lab-based, I also generated and analysed single-cell and bulk data on chronic myelomonocytic leukaemia (CMML), a blood cancer that can turn into aggressive acute leukaemia.',
+    highlights: [
+      {
+        title: 'Why CMML turns into acute leukaemia (lead)',
+        text: "About 30% of patients see CMML turn into a hard-to-treat acute leukaemia. Following patients' cells over time, I found that stem-cell-like clones take over, and that combining two drugs works better against them than either alone.",
+        tag: 'ASH 2022 Abstract Achievement Award',
+      },
+      {
+        title: 'KIT mutations in CMML with mastocytosis (co-lead)',
+        text: 'KIT mutations turned out to be in only part of the cancer, and the cells without them grow when patients take KIT-blocking drugs.',
+        tag: 'EHA 2023',
+      },
+      {
+        title: 'How the cancer quietens the immune system',
+        text: 'Gene-activity data from blood cells of older donors showed how a signal called resistin switches on genes that dampen immunity.',
+        tag: 'J Clin Invest 2026',
+      },
+      {
+        title: 'Faulty gene splicing in SRSF2-mutant cells',
+        text: 'Found that the gene CHD8 is spliced incorrectly, matching weak points found in a separate drug-target screen.',
+        tag: 'ASH 2025',
+      },
+      {
+        title: 'EspressoPro',
+        text: 'A Python package that automatically labels cell types from single-cell protein measurements, used across CMML and MDS patient groups.',
+      },
+    ],
+    papers: ['2020-08-01-EBM', '2023-06-01-CSC', '2023-04-05-BJH', '2023-11-02-Leukemia', '2024-07-12-BCJ', '2024-10-04-Leukemia'],
+  },
+  {
+    title: 'Business Development Associate',
+    org: 'Innovation Forum',
+    place: 'Manchester',
+    label: 'Volunteer',
+    dates: 'Jan 2022 – Jan 2023',
+    summary:
+      'A volunteer role alongside my PhD to learn how scientific discoveries become products and treatments: commercialisation, technology transfer and the route to industry and the clinic.',
+    highlights: [
+      {
+        title: 'UK genomics market and accelerator events',
+        text: 'I met people working in technology transfer, biotech and the NHS, helped run events with investors and patent attorneys, and wrote the branch’s analysis of the UK genomics market.',
+      },
+    ],
+    links: [{ label: 'The UK genomics market (blog post)', href: 'blog/uk-genomics-market/' }],
   },
   {
     title: 'Research Associate',
     org: 'Randall Centre for Cell & Molecular Biophysics',
     place: "King's College London",
-    dates: '2018 – 2019',
+    dates: 'Jan 2018 – Jan 2019',
     summary:
-      'Working at the bench, I studied how chemical tags on DNA and the proteins that package it (epigenetics) control cellular ageing, known as senescence, and how the cancer-linked metabolite 2-HG interferes with them.',
+      'My MRes project, continued as a research assistant: mostly lab work, with my first steps in computational analysis.',
+    highlights: [
+      {
+        title: 'Switches behind cellular ageing',
+        text: 'I studied how a protein called Meox2 turns on genes that drive cellular ageing (senescence), predicting where it binds DNA with computational tools and confirming it with lab experiments.',
+      },
+    ],
   },
 ];
 
 export const positions: TimelineItem[] = experience
-  .filter((e) => !e.title.startsWith('PhD'))
+  .filter((e) => !e.title.startsWith('PhD') && !e.label)
   .map(({ title, org, place, dates }) => ({ title, org: `${org}, ${place}`, dates }));
 
 export const education: TimelineItem[] = [
