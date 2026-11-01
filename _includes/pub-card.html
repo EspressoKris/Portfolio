@@ -3,9 +3,10 @@
   One publication as a card. Pass `post`. Optional: show_excerpt=false.
 {% endcomment %}
 <article class="pub-card" itemscope itemtype="http://schema.org/ScholarlyArticle">
-  {% if post.thumbnail %}
+  {% if post.image %}
+    {% assign thumb_name = post.image | split: "/" | last | split: "." | first %}
     <a class="pub-card__thumb" href="{{ base_path }}{{ post.url }}" tabindex="-1" aria-hidden="true">
-      <img src="{{ base_path }}{{ post.thumbnail }}" alt="" loading="lazy">
+      <img src="{{ base_path }}/images/GraphicalAbstracts/thumbs/{{ thumb_name }}.jpg" alt="" loading="lazy">
     </a>
   {% endif %}
   <div class="pub-card__body">

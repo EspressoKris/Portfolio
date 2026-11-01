@@ -1,4 +1,4 @@
-# Single source for the CV page and the homepage timeline.
+# Homepage timeline (experience, education) and highlights.
 # Sourced from ORCID 0000-0002-5540-3398 — keep the two in sync.
 
 positions:
@@ -23,6 +23,7 @@ education:
     org: University of Perugia
     dates: 2012 – 2015
 
+# The first award is shown in the homepage highlights.
 awards:
   - title: ASH Abstract Achievement Award
     org: American Society of Hematology

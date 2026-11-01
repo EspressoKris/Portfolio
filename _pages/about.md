@@ -19,12 +19,12 @@ redirect_from:
     I trained first as a wet-lab scientist in leukaemia stem cell biology, then moved into computational work during my
     PhD at the Cancer Research UK Manchester Institute.
   </p>
-  <p class="hero__actions">
-    <a class="btn btn--primary" href="{{ base_path }}/publications/">Publications</a>
-    <a class="btn btn--inverse" href="{{ base_path }}/cv/">CV</a>
-    <a class="btn btn--inverse" href="{{ site.author.googlescholar }}">Google Scholar</a>
-    <a class="btn btn--inverse" href="mailto:{{ site.author.email }}">Get in touch</a>
-  </p>
+  {% assign first_author = site.publications | where: "role", "First author" %}
+  <ul class="highlights">
+    <li><strong>{{ site.publications.size }}</strong> peer-reviewed papers</li>
+    <li><strong>{{ first_author.size }}</strong> first-author</li>
+    <li>{{ site.data.cv.awards[0].title }} {{ site.data.cv.awards[0].dates }}</li>
+  </ul>
 </section>
 
 ## Research
@@ -60,6 +60,13 @@ redirect_from:
 
 <p><a href="{{ base_path }}/publications/">All publications <i class="fas fa-arrow-right" aria-hidden="true"></i></a></p>
 
-## Experience
-
-{% include cv-timeline.html items=site.data.cv.positions %}
+<div class="two-col">
+  <section>
+    <h2>Experience</h2>
+    {% include cv-timeline.html items=site.data.cv.positions %}
+  </section>
+  <section>
+    <h2>Education</h2>
+    {% include cv-timeline.html items=site.data.cv.education %}
+  </section>
+</div>
