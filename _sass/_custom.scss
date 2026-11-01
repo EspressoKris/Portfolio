@@ -1,0 +1,434 @@
+/* ==========================================================================
+   Site-specific styles (homepage hero, publication cards, timeline)
+   ========================================================================== */
+
+$accent      : $primary-color;
+$accent-soft : mix(#fff, $primary-color, 92%);
+$muted       : #5f6b76;
+$card-border : #e3e8ee;
+
+body {
+  -webkit-font-smoothing: antialiased;
+  color: $text-color;
+}
+
+.page__content,
+.archive {
+  font-size: 1rem;
+  line-height: 1.65;
+
+  h2 {
+    margin-top: 2.2em;
+    padding-bottom: 0.35em;
+    font-size: 1.35em;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    border-bottom: 1px solid $card-border;
+  }
+}
+
+.page__title {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+a { text-underline-offset: 0.15em; }
+
+figcaption { font-family: inherit; }
+
+/* Masthead
+   ========================================================================== */
+
+.masthead {
+  border-bottom-color: $card-border;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.masthead__menu-item a {
+  font-weight: 500;
+  color: $muted;
+  &:hover { color: $accent; }
+}
+
+.masthead__menu-item--lg a {
+  font-weight: 700;
+  color: $accent;
+}
+
+/* Buttons
+   ========================================================================== */
+
+.btn {
+  padding: 0.6em 1.1em;
+  font-family: inherit;
+  font-size: 0.85em;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none !important;
+  transition: background-color 0.15s ease, color 0.15s ease;
+
+  &:hover { background-color: mix(#000, $accent, 20%); }
+
+  &--inverse {
+    color: $accent !important;
+    background-color: #fff;
+    box-shadow: inset 0 0 0 1px mix(#fff, $accent, 60%);
+    &:hover {
+      color: $accent !important;
+      background-color: $accent-soft;
+    }
+  }
+}
+
+/* Sidebar
+   ========================================================================== */
+
+.author__avatar img {
+  max-width: 160px;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 1px $card-border;
+}
+
+.author__name {
+  font-size: 1.15em;
+  font-weight: 700;
+  color: $text-color;
+}
+
+.author__bio {
+  color: $muted;
+  line-height: 1.45;
+}
+
+.author__urls {
+  font-size: 0.85em;
+  a { color: $text-color; }
+  a:hover { color: $accent; }
+}
+
+/* Homepage hero
+   ========================================================================== */
+
+.hero {
+  margin: 0.5em 0 1em;
+
+  &__eyebrow {
+    margin: 0 0 0.6em;
+    font-size: 0.78em;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $link-color;
+  }
+
+  &__title {
+    margin: 0 0 0.6em;
+    font-family: "Source Serif 4", Georgia, serif;
+    font-size: 1.75em;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    color: $text-color;
+
+    @include breakpoint($medium) { font-size: 2.1em; }
+  }
+
+  &__lead {
+    max-width: 40em;
+    font-size: 1.05em;
+    color: #3a4651;
+  }
+
+  &__actions .btn { margin: 0 0.4em 0.5em 0; }
+}
+
+/* Research interests
+   ========================================================================== */
+
+.interest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1em;
+  margin: 1.2em 0;
+}
+
+.interest {
+  padding: 1.1em 1.2em;
+  background: $accent-soft;
+  border-radius: $border-radius;
+
+  h3 {
+    margin: 0 0 0.4em;
+    font-size: 0.98em;
+    font-weight: 700;
+    color: $accent;
+
+    i { margin-right: 0.35em; }
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.9em;
+    line-height: 1.5;
+    color: #3a4651;
+  }
+}
+
+.wordcloud {
+  margin: 1.5em 0 0;
+  text-align: center;
+
+  img {
+    width: 100%;
+    max-width: 620px;
+    height: auto;
+  }
+
+  figcaption {
+    font-size: 0.8em;
+    color: $muted;
+  }
+}
+
+/* Publication cards
+   ========================================================================== */
+
+.pub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+  margin: 1em 0 1.5em;
+}
+
+.pub-card {
+  display: flex;
+  gap: 1.1em;
+  padding: 1em;
+  background: #fff;
+  border: 1px solid $card-border;
+  border-radius: $border-radius;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: mix(#fff, $accent, 55%);
+    box-shadow: 0 4px 14px rgba(11, 61, 92, 0.08);
+  }
+
+  &__thumb {
+    flex: 0 0 140px;
+    align-self: flex-start;
+    display: block;
+    overflow: hidden;
+    border-radius: 6px;
+    background: #f4f6f8;
+
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+  }
+
+  &__body { flex: 1; min-width: 0; }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4em;
+    margin: 0 0 0.3em;
+    font-size: 0.8em;
+    color: $muted;
+  }
+
+  &__venue {
+    font-weight: 600;
+    font-style: italic;
+    color: $text-color;
+  }
+
+  &__title {
+    margin: 0 0 0.35em;
+    font-size: 1.02em;
+    font-weight: 600;
+    line-height: 1.35;
+
+    a {
+      color: $text-color;
+      text-decoration: none;
+      &:hover { color: $accent; text-decoration: underline; }
+    }
+  }
+
+  &__authors {
+    margin: 0 0 0.45em;
+    font-size: 0.82em;
+    line-height: 1.45;
+    color: $muted;
+
+    strong { color: $text-color; }
+  }
+
+  &__excerpt {
+    margin: 0 0 0.5em;
+    font-size: 0.9em;
+    line-height: 1.5;
+    color: #3a4651;
+  }
+
+  &__links {
+    margin: 0;
+    font-size: 0.82em;
+
+    a {
+      margin-right: 1em;
+      font-weight: 600;
+      text-decoration: none;
+      &:hover { text-decoration: underline; }
+    }
+
+    i { margin-right: 0.2em; }
+  }
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+
+    &__thumb { flex-basis: auto; max-width: 200px; }
+  }
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15em 0.6em;
+  font-size: 0.9em;
+  font-weight: 600;
+  font-style: normal;
+  color: #fff;
+  background: $accent;
+  border-radius: 999px;
+}
+
+/* Single publication page
+   ========================================================================== */
+
+.pub-header {
+  margin: 0.4em 0 1em;
+
+  &__authors {
+    margin: 0.3em 0 0.8em;
+    font-size: 0.9em;
+    color: $muted;
+    strong { color: $text-color; }
+  }
+
+  &__links .btn { margin: 0 0.4em 0.4em 0; }
+}
+
+.pub-figure {
+  margin: 1.2em 0 0.5em;
+  text-align: center;
+
+  img {
+    width: 100%;
+    max-width: 560px;
+    height: auto;
+    border: 1px solid $card-border;
+    border-radius: $border-radius;
+  }
+
+  figcaption {
+    font-size: 0.8em;
+    color: $muted;
+  }
+}
+
+.pub-citation {
+  font-size: 0.88em;
+  font-style: normal;
+  line-height: 1.55;
+  border-left-color: $accent;
+  a { word-break: break-all; }
+}
+
+.pub-metrics { margin: 0.5em 0 1em; }
+
+/* Timeline (experience, education)
+   ========================================================================== */
+
+.timeline {
+  margin: 1em 0 1.5em;
+  padding: 0;
+  list-style: none;
+
+  li {
+    position: relative;
+    margin: 0;
+    padding: 0 0 1.1em 1.4em;
+    border-left: 2px solid $card-border;
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 0.35em;
+      left: -6px;
+      width: 10px;
+      height: 10px;
+      background: #fff;
+      border: 2px solid $accent;
+      border-radius: 50%;
+    }
+
+    &:last-child { padding-bottom: 0.2em; }
+  }
+
+  &__dates {
+    display: block;
+    font-size: 0.78em;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: $link-color;
+  }
+
+  &__title {
+    display: block;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  &__org {
+    display: block;
+    font-size: 0.88em;
+    color: $muted;
+  }
+}
+
+.skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin: 1em 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    margin: 0;
+    padding: 0.3em 0.8em;
+    font-size: 0.85em;
+    background: $accent-soft;
+    color: $accent;
+    border-radius: 999px;
+  }
+}
+
+.page-intro { color: $muted; }
+
+/* Footer
+   ========================================================================== */
+
+.page__footer {
+  background: #f6f8fa;
+  border-top: 1px solid $card-border;
+  color: $muted;
+}

@@ -1,0 +1,11 @@
+{% comment %}Citation and metrics for a single publication page.{% endcomment %}
+{% assign doi = page.paperurl | remove: "https://doi.org/" %}
+<h2 id="citation">Citation</h2>
+<blockquote class="pub-citation">
+  {{ page.authors | remove: "**" }} ({{ page.date | date: "%Y" }}). {{ page.title }}. <em>{{ page.venue }}</em>{% if page.volume %}, {{ page.volume }}{% endif %}{% if page.pages %}, {{ page.pages }}{% endif %}. <a href="{{ page.paperurl }}">{{ page.paperurl }}</a>
+</blockquote>
+
+<h2>Metrics</h2>
+<div class="pub-metrics">
+  <a href="https://plu.mx/plum/a/?doi={{ doi | url_encode }}" class="plumx-details plum-bigben-theme" data-site="plum" data-hide-when-empty="true" data-hide-print="true" data-no-link="true" data-pass-hidden-categories="true" data-hide-mentions="true">{{ page.title }}</a>
+</div>
