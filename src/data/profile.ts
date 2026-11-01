@@ -10,7 +10,7 @@ export const profile = {
   employer: 'University of Oxford',
   email: 'kristian.gurashi@gmail.com',
   description:
-    'Computational biologist with 7+ years in blood cancer research, combining lab science and data science to understand how leukaemias develop and respond to treatment.',
+    'Computational biologist with 7+ years in cancer research, combining lab experiments and data science to understand how cancers develop and respond to treatment.',
 };
 
 // Homepage intro. `statement` is the large line; `summary` is one paragraph per item.
@@ -18,8 +18,8 @@ export const intro = {
   statement:
     'Enthusiastic about data-driven discovery and translational science, bringing lab experiments and computational analysis together.',
   summary: [
-    "I'm a scientist who studies blood cancer with computers. I started out in the lab, and for more than seven years I've combined that hands-on experience with data analysis, working closely with doctors, biologists, statisticians and computer scientists so that what we learn can one day help patients.",
-    "Most of my work is on leukaemia, a cancer of the blood and bone marrow, in children and older adults: how it changes and becomes more dangerous, how faulty cells compete with healthy ones, how it interacts with the immune system, how the genes we inherit affect our risk, and why treatment works for some people but not others. I'm now applying the same approach to how the body copes with infections.",
+    "I'm a scientist who studies cancer with computers. I started out in the lab, and for more than seven years I've combined that hands-on experience with data analysis, working closely with doctors, biologists, statisticians and computer scientists so that what we learn can one day help patients.",
+    "My work spans cancer biology, with a particular focus on leukaemia in children and older adults: how cancers change and become more dangerous, how faulty cells compete with healthy ones, how tumours interact with the immune system, how the genes we inherit affect our risk, and why treatment works for some people but not others. I'm now widening this to a more systems-level view, looking at how the whole body responds to disease, infection and other stresses.",
   ],
 };
 
