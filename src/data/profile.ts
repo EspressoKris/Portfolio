@@ -15,12 +15,11 @@ export const profile = {
 
 // Homepage intro. `statement` is the large line; `summary` is one paragraph per item.
 export const intro = {
-  statement:
-    'I turn large biological datasets into ideas that can be tested, to understand how blood cancers start, change and respond to treatment.',
+  statement: 'I use data to understand how blood cancers start, change and respond to treatment.',
   summary: [
-    "I'm a computational biologist with more than seven years in blood cancer research. I began in the lab and now combine lab science with data science, bringing together many kinds of molecular measurements: from whole tissue samples, from individual cells, and from where cells sit within a tissue. I work in teams of doctors, computer scientists, biologists and statisticians to move discoveries closer to patients.",
-    "Most of my work is on myeloid leukaemias, in children and in older adults. I study how these cancers evolve and become more aggressive, how cells carrying mutations in genes such as TP53 and KIT grow and compete, how leukaemic stem cells interact with the immune system and their surroundings in the bone marrow, what role inherited risk plays, and why some patients respond to treatment while others don't. I'm now bringing the same approach to infectious disease, to understand how the body responds to infections and other stresses.",
-    'What I enjoy most is turning data into hypotheses that can be tested in experiments. I build reliable analysis pipelines, keep data organised and shareable so results can be repeated and scaled up, and use statistics and machine learning (in Python and R) to find markers of disease and possible drug targets.',
+    "I'm a scientist who studies blood cancer with computers. I started out doing experiments in the lab, and for more than seven years I've combined that hands-on experience with data analysis. I work closely with doctors, biologists, statisticians and computer scientists, so that what we learn can one day help patients.",
+    "Most of my work is on leukaemia, a cancer of the blood and bone marrow, in both children and older adults. I look at how it changes over time and becomes more dangerous, how faulty cells compete with healthy ones, how the cancer interacts with the immune system, how the genes we inherit affect our risk, and why treatment works for some people but not others. I'm now using the same approach to study how the body copes with infections.",
+    'The part I enjoy most is spotting a pattern in the data and turning it into an idea we can test in the lab. I build tools that make analyses reliable and easy to repeat, and use statistics and machine learning to find early signs of disease and new targets for treatment.',
   ],
 };
 
