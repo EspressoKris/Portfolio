@@ -1,5 +1,6 @@
 import phdPhoto from '../assets/career/phd-manchester.jpg';
 import kclPhoto from '../assets/career/kcl-lab.jpg';
+import oxfordPhoto from '../assets/career/oxford-group.jpg';
 
 // Everything about you that appears around the site.
 // Positions, education and awards are from ORCID 0000-0002-5540-3398.
@@ -64,6 +65,8 @@ export const experience: ExperienceItem[] = [
     org: 'MRC Weatherall Institute of Molecular Medicine',
     place: 'University of Oxford',
     dates: 'Jan 2024 – present',
+    photo: oxfordPhoto,
+    photoAlt: 'Kristian with his research group on a staircase in Oxford',
     summary:
       'I lead and co-lead projects that study blood cancers cell by cell: reading which genes are active in tens of thousands of individual cells, and mapping where those cells sit inside the bone marrow.',
     highlights: [
