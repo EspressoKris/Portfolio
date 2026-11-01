@@ -15,11 +15,11 @@ export const profile = {
 
 // Homepage intro. `statement` is the large line; `summary` is one paragraph per item.
 export const intro = {
-  statement: 'I use data to understand how blood cancers start, change and respond to treatment.',
+  statement:
+    'Enthusiastic about data-driven discovery and translational science, bringing lab experiments and computational analysis together.',
   summary: [
-    "I'm a scientist who studies blood cancer with computers. I started out doing experiments in the lab, and for more than seven years I've combined that hands-on experience with data analysis. I work closely with doctors, biologists, statisticians and computer scientists, so that what we learn can one day help patients.",
-    "Most of my work is on leukaemia, a cancer of the blood and bone marrow, in both children and older adults. I look at how it changes over time and becomes more dangerous, how faulty cells compete with healthy ones, how the cancer interacts with the immune system, how the genes we inherit affect our risk, and why treatment works for some people but not others. I'm now using the same approach to study how the body copes with infections.",
-    'The part I enjoy most is spotting a pattern in the data and turning it into an idea we can test in the lab. I build tools that make analyses reliable and easy to repeat, and use statistics and machine learning to find early signs of disease and new targets for treatment.',
+    "I'm a scientist who studies blood cancer with computers. I started out in the lab, and for more than seven years I've combined that hands-on experience with data analysis, working closely with doctors, biologists, statisticians and computer scientists so that what we learn can one day help patients.",
+    "Most of my work is on leukaemia, a cancer of the blood and bone marrow, in children and older adults: how it changes and becomes more dangerous, how faulty cells compete with healthy ones, how it interacts with the immune system, how the genes we inherit affect our risk, and why treatment works for some people but not others. I'm now applying the same approach to how the body copes with infections.",
   ],
 };
 
