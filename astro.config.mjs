@@ -22,7 +22,7 @@ export default defineConfig({
     // Starlight only powers /tutorials/ (docs live in src/content/docs/tutorials/)
     starlight({
       title: 'Tutorials · Kristian Gurashi',
-      description: 'Hands-on bioinformatics tutorials: bulk and single-cell RNA-seq, genomes and genotyping.',
+      description: 'Hands-on bioinformatics tutorials, from raw data to results.',
       logo: { src: './src/assets/logo.svg', alt: 'KG' },
       favicon: '/favicon.svg',
       social: [
@@ -43,11 +43,6 @@ export default defineConfig({
               items: [{ label: 'CellBender', slug: 'tutorials/transcriptomics/single-cell/cellbender' }],
             },
           ],
-        },
-        {
-          label: 'More on GitBook',
-          link: 'https://espressokris.gitbook.io/tutorials',
-          attrs: { target: '_blank', rel: 'noopener' },
         },
       ],
       disable404Route: true,
