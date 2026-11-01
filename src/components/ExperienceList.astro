@@ -32,6 +32,7 @@ const shortTitle = (t: string) => (t.length > 78 ? t.slice(0, 76).replace(/\s+\S
       <div class="xp__what">
         <h3 class="xp__title">{item.title}</h3>
         <p class="xp__org">{item.org}</p>
+        {item.affiliation && <p class="xp__affiliation">{item.affiliation}</p>}
         <p class="xp__summary">{item.summary}</p>
 
         {item.highlights && item.highlights.length > 0 && (
@@ -212,6 +213,8 @@ const shortTitle = (t: string) => (t.length > 78 ? t.slice(0, 76).replace(/\s+\S
   .xp__title { margin: 0; font-size: 1.12rem; }
 
   .xp__org { margin: 0.1rem 0 0.7rem; font-size: 0.92rem; color: var(--muted); }
+  .xp__org:has(+ .xp__affiliation) { margin-bottom: 0.1rem; }
+  .xp__affiliation { margin: 0 0 0.7rem; font-size: 0.92rem; color: var(--muted); }
 
   .xp__summary { margin: 0; max-width: 46em; color: var(--text-soft); }
 

@@ -51,6 +51,7 @@ export type Highlight = { title: string; text: string; tag?: string };
 export type ExperienceItem = TimelineItem & {
   place: string;
   label?: string;
+  affiliation?: string; // optional extra line under the organisation
   photo?: ImageMetadata;
   photoAlt?: string;
   summary: string;
@@ -63,6 +64,7 @@ export const experience: ExperienceItem[] = [
   {
     title: 'Postdoctoral Computational Biologist',
     org: 'MRC Weatherall Institute of Molecular Medicine',
+    affiliation: 'Associate Graduate Common Room Member – Christ Church College',
     place: 'University of Oxford',
     dates: 'Jan 2024 – present',
     photo: oxfordPhoto,
