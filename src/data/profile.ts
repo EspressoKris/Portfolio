@@ -3,7 +3,7 @@
 
 export const profile = {
   name: 'Kristian Gurashi',
-  title: 'Dr. Kristian Gurashi',
+  title: 'Dr. Kristian Gurashi, PhD',
   role: 'Postdoctoral computational biologist',
   tagline: 'Single-cell & multi-omics · myeloid leukaemia',
   location: 'Oxford, United Kingdom',
@@ -88,7 +88,6 @@ export const experience: ExperienceItem[] = [
         text: 'Pipelines that turn raw single-cell data into analysis-ready results with one command on the computing cluster, and a statistical method to rank which RNAs the protein PCBP2 binds.',
       },
     ],
-    links: [{ label: 'How I clean single-cell data (CellBender tutorial)', href: 'tutorials/transcriptomics/single-cell/cellbender/' }],
   },
   {
     title: 'External Bioinformatics Collaborator',

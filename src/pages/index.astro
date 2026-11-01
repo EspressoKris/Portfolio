@@ -18,22 +18,27 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
 ---
 <Base>
   <section class="hero container">
-    <div class="hero__photo-wrap">
-      <Image
-        src={profileImg}
-        alt={`Portrait of ${profile.name}`}
-        widths={[320, 480, 720]}
-        sizes="(max-width: 760px) 220px, 360px"
-        class="hero__photo"
-        loading="eager"
-        fetchpriority="high"
-      />
+    <div class="hero__side">
+      <div class="hero__photo-wrap">
+        <Image
+          src={profileImg}
+          alt={`Portrait of ${profile.name}`}
+          widths={[320, 480, 720]}
+          sizes="(max-width: 760px) 220px, 360px"
+          class="hero__photo"
+          loading="eager"
+          fetchpriority="high"
+        />
+      </div>
+      <div class="hero__id">
+        <p class="eyebrow">Computational biology · Haemato-oncology</p>
+        <h1 class="hero__name serif">{profile.title}</h1>
+        <p class="hero__role">{profile.role} · {profile.employer}</p>
+      </div>
     </div>
 
     <div class="hero__text">
-      <p class="eyebrow">Computational biology · Haemato-oncology</p>
-      <h1 class="hero__name serif">{profile.title}</h1>
-      <p class="hero__role">{profile.role} · {profile.employer}</p>
+      <h2 class="hero__about serif">About me</h2>
       <p class="hero__statement">{intro.statement}</p>
       <div class="hero__lead">
         {intro.summary.map((para) => <p>{para}</p>)}
@@ -132,7 +137,10 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
     isolation: isolate;
   }
 
-  @media (min-width: 760px) { .hero__photo-wrap { width: 100%; position: sticky; top: 96px; } }
+  @media (min-width: 760px) {
+    .hero__photo-wrap { width: 100%; }
+    .hero__side { position: sticky; top: 96px; }
+  }
 
   /* soft offset block behind the photo */
   .hero__photo-wrap::before {
@@ -156,15 +164,26 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
     box-shadow: var(--shadow);
   }
 
+  .hero__id { margin-top: 1.8rem; }
+  .hero__id .eyebrow { margin-bottom: 0.5rem; letter-spacing: 0.08em; }
+
   .hero__name {
     margin: 0;
-    font-size: clamp(2.2rem, 4.5vw, 3.2rem);
+    font-size: clamp(1.45rem, 2.1vw, 1.65rem);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+
+  .hero__role { margin: 0.4rem 0 0; font-size: 0.93rem; color: var(--muted); }
+
+  .hero__about {
+    margin: 0;
+    font-size: clamp(2.1rem, 4.2vw, 3rem);
     font-weight: 700;
     line-height: 1.08;
     letter-spacing: -0.02em;
   }
-
-  .hero__role { margin: 0.5rem 0 0; font-size: 0.98rem; color: var(--muted); }
 
   .hero__statement {
     max-width: 30em;
