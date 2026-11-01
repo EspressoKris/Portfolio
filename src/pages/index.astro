@@ -2,10 +2,10 @@
 import { getCollection } from 'astro:content';
 import { Image } from 'astro:assets';
 import Base from '../layouts/Base.astro';
-import CellMap from '../components/CellMap.astro';
 import PubCard from '../components/PubCard.astro';
 import Timeline from '../components/Timeline.astro';
 import ExperienceList from '../components/ExperienceList.astro';
+import ResearchAnim from '../components/ResearchAnim.astro';
 import Icon from '../components/Icon.astro';
 import { profile, intro, links, experience, education, awards, research } from '../data/profile';
 import { url } from '../lib/url';
@@ -58,31 +58,11 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
     <div class="research-grid">
       {research.map((r) => (
         <div class="research-card">
-          <span class="research-card__icon"><Icon name={r.icon} size="22" /></span>
+          <ResearchAnim kind={r.anim} />
           <h3>{r.title}</h3>
           <p>{r.text}</p>
         </div>
       ))}
-    </div>
-  </section>
-
-  <section class="section container reveal" aria-labelledby="explore">
-    <div class="explore">
-      <div class="explore__text">
-        <p class="eyebrow">Explore</p>
-        <h2 id="explore" class="explore__title">What a single-cell map shows</h2>
-        <p>
-          Each dot is one cell from a bone marrow sample. Cells with similar gene activity sit close together, so the map
-          traces how stem cells mature into the different blood cell types.
-        </p>
-        <p>
-          Switch to <strong>CMML</strong> to see what this kind of leukaemia does: monocytes take over, other lineages
-          shrink and immature leukaemic blasts appear. Hover over the cells, or tap the legend, to pick out a cell type.
-        </p>
-      </div>
-      <div class="explore__map">
-        <CellMap />
-      </div>
     </div>
   </section>
 
@@ -200,18 +180,6 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
   .hero__lead p { margin: 0 0 0.85rem; }
   .hero__lead p:last-child { margin-bottom: 0; }
 
-  .explore {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.5rem 3rem;
-    align-items: center;
-  }
-
-  @media (min-width: 900px) { .explore { grid-template-columns: 0.8fr 1.2fr; } }
-
-  .explore__title { margin: 0 0 0.8rem; font-size: 1.45rem; }
-  .explore__text p { margin: 0 0 0.9rem; color: var(--text-soft); }
-  .explore__text strong { color: var(--text); }
 
   .highlights {
     display: flex;
@@ -270,17 +238,6 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
   }
 
   .research-card:hover { border-color: var(--link); transform: translateY(-2px); }
-
-  .research-card__icon {
-    display: grid;
-    place-items: center;
-    width: 2.6rem;
-    height: 2.6rem;
-    margin-bottom: 0.9rem;
-    color: var(--on-accent);
-    background: var(--accent);
-    border-radius: 10px;
-  }
 
   .research-card h3 { margin: 0 0 0.4rem; font-size: 1.02rem; }
   .research-card p { margin: 0; font-size: 0.93rem; line-height: 1.55; color: var(--text-soft); }

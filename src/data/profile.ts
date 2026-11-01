@@ -107,19 +107,23 @@ export const awards: TimelineItem[] = [
   },
 ];
 
-export const research = [
+// `anim` picks the small animation on each card (see src/components/ResearchAnim.astro).
+export const research: { icon: string; anim: 'clusters' | 'evolution' | 'tree'; title: string; text: string }[] = [
   {
     icon: 'cells',
+    anim: 'clusters',
     title: 'Single-cell & multi-omics',
     text: 'Single-cell transcriptomic and multiomic profiling of haematopoietic and leukaemic stem cells to map disease heterogeneity.',
   },
   {
     icon: 'route',
+    anim: 'evolution',
     title: 'Leukaemic transformation',
     text: 'How chronic myeloid neoplasms such as CMML and MDS evolve and transform into acute leukaemia.',
   },
   {
     icon: 'tree',
+    anim: 'tree',
     title: 'Stratification & drug response',
     text: 'Machine-learning approaches that combine clinical, immunophenotype and transcriptome data to predict therapeutic vulnerabilities.',
   },

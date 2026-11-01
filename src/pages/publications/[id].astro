@@ -6,11 +6,16 @@ import Icon from '../../components/Icon.astro';
 import { url, authorsHtml } from '../../lib/url';
 
 export async function getStaticPaths() {
-  const pubs = await getCollection('publications');
-  return pubs.map((pub) => ({ params: { id: pub.id }, props: { pub } }));
+  const pubs = (await getCollection('publications')).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+  // Same order as the Publications page (newest first): "previous" is the one above, "next" the one below.
+  return pubs.map((pub, i) => ({
+    params: { id: pub.id },
+    props: { pub, prev: pubs[i - 1] ?? null, next: pubs[i + 1] ?? null },
+  }));
 }
 
-const { pub } = Astro.props as { pub: CollectionEntry<'publications'> };
+type Pub = CollectionEntry<'publications'>;
+const { pub, prev, next } = Astro.props as { pub: Pub; prev: Pub | null; next: Pub | null };
 const { Content } = await render(pub);
 const d = pub.data;
 const doi = d.paperurl.replace('https://doi.org/', '');
@@ -60,7 +65,10 @@ const citation = `${plainAuthors} (${year}). ${d.title}. ${d.venue}${d.volume ? 
       </ul>
     )}
 
-    <h2 class="paper__h2" id="citation">Citation</h2>
+    <div class="paper__h2-row">
+      <h2 class="paper__h2" id="citation">Citation</h2>
+      <button class="btn btn--ghost btn--sm" type="button" data-copy={citation}><Icon name="quote" /> <span>Copy</span></button>
+    </div>
     <blockquote class="paper__citation">
       {plainAuthors} ({year}). {d.title}. <em>{d.venue}</em>{d.volume && `, ${d.volume}`}{d.pages && `, ${d.pages}`}.
       {' '}<a href={d.paperurl}>{d.paperurl}</a>
@@ -70,6 +78,23 @@ const citation = `${plainAuthors} (${year}). ${d.title}. ${d.venue}${d.volume ? 
     <div class="paper__metrics">
       <a href={`https://plu.mx/plum/a/?doi=${encodeURIComponent(doi)}`} class="plumx-details plum-bigben-theme" data-site="plum" data-hide-when-empty="true" data-hide-print="true" data-no-link="true" data-pass-hidden-categories="true" data-hide-mentions="true">{d.title}</a>
     </div>
+
+    <nav class="pager" aria-label="More publications">
+      {prev ? (
+        <a class="pager__link" href={url(`publications/${prev.id}/`)} rel="prev">
+          <span class="pager__dir">← Previous</span>
+          <span class="pager__title">{prev.data.title}</span>
+          <span class="pager__meta"><em>{prev.data.venue}</em> · {prev.data.date.getFullYear()}</span>
+        </a>
+      ) : <span />}
+      {next ? (
+        <a class="pager__link pager__link--next" href={url(`publications/${next.id}/`)} rel="next">
+          <span class="pager__dir">Next →</span>
+          <span class="pager__title">{next.data.title}</span>
+          <span class="pager__meta"><em>{next.data.venue}</em> · {next.data.date.getFullYear()}</span>
+        </a>
+      ) : <span />}
+    </nav>
   </article>
 </Base>
 
@@ -79,6 +104,7 @@ const citation = `${plainAuthors} (${year}). ${d.title}. ${d.venue}${d.volume ? 
   document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const label = btn.querySelector('span')!;
+      const original = label.textContent;
       try {
         await navigator.clipboard.writeText(btn.dataset.copy!);
         label.textContent = 'Copied!';
@@ -86,7 +112,7 @@ const citation = `${plainAuthors} (${year}). ${d.title}. ${d.venue}${d.volume ? 
         location.hash = 'citation';
         return;
       }
-      setTimeout(() => (label.textContent = 'Copy citation'), 1800);
+      setTimeout(() => (label.textContent = original), 1800);
     });
   });
 </script>
@@ -152,5 +178,53 @@ const citation = `${plainAuthors} (${year}). ${d.title}. ${d.venue}${d.volume ? 
     overflow-wrap: anywhere;
   }
 
-  :global([data-theme='dark']) .paper__metrics :global(.PlumX-Details) { padding: 0.6rem; background: #fff; border-radius: 10px; }
+  .paper__h2-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 2.5rem 0 0.8rem; }
+  .paper__h2-row .paper__h2 { margin: 0; }
+  .btn--sm { padding: 0.45em 0.85em; font-size: 0.8rem; }
+
+  /* PlumX injects its own markup: lay the three boxes out side by side */
+  .paper__metrics :global(.PlumX-Details) { min-width: 0 !important; width: 100%; max-width: none; }
+  .paper__metrics :global(.ppd-container),
+  .paper__metrics :global(.ppd-rows) { display: block !important; width: 100%; }
+  .paper__metrics :global(.ppd-row) { display: flex !important; flex-wrap: wrap; gap: 0.75rem; }
+  .paper__metrics :global(.ppd-box) {
+    flex: 1 1 180px;
+    width: auto !important;
+    margin: 0 !important;
+    vertical-align: top;
+  }
+  .paper__metrics :global(.ppd-footer) { margin-top: 0.5rem; }
+  :global([data-theme='dark']) .paper__metrics :global(.PlumX-Details) { padding: 0.75rem; background: #fff; border-radius: 10px; }
+
+  .pager {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (min-width: 640px) { .pager { grid-template-columns: 1fr 1fr; } }
+
+  .pager__link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 1rem 1.1rem;
+    color: inherit;
+    text-decoration: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+  }
+
+  .pager__link:hover { border-color: var(--link); background: var(--bg-soft); transform: translateY(-2px); }
+  .pager__link--next { text-align: right; align-items: flex-end; }
+  @media (min-width: 640px) { .pager__link--next { grid-column: 2; } }
+
+  .pager__dir { font-size: 0.8rem; font-weight: 600; color: var(--link); }
+  .pager__title { font-weight: 600; line-height: 1.35; color: var(--text); }
+  .pager__meta { font-size: 0.8rem; color: var(--muted); }
+  .pager__meta em { font-style: italic; }
 </style>

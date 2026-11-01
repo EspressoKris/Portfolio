@@ -1,0 +1,231 @@
+---
+// Small looping illustration for a research card. Purely decorative.
+//   clusters  — scattered cells settle into cell-type clusters (single-cell maps)
+//   evolution — a mutant clone spreads, then a subclone takes over (clonal evolution)
+//   tree      — patients flow down a decision tree into subgroups (stratification)
+interface Props { kind: 'clusters' | 'evolution' | 'tree' }
+const { kind } = Astro.props;
+---
+<div class="ranim">
+  <canvas data-anim={kind} aria-hidden="true"></canvas>
+</div>
+
+<script>
+  type Ctx = CanvasRenderingContext2D;
+  type Scene = { draw: (ctx: Ctx, w: number, h: number, t: number, dt: number) => void; still: number };
+
+  const PALETTE = ['#f28e2b', '#4e79a7', '#59a14f', '#e15759', '#b07aa1', '#76b7b2'];
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const css = (name: string, fallback: string) =>
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+  let theme = { muted: '#66727e', border: '#e2e7ed', text: '#17212b' };
+  const readTheme = () => (theme = { muted: css('--muted', theme.muted), border: css('--border', theme.border), text: css('--text', theme.text) });
+  readTheme();
+
+  function rng(seed: number) {
+    return () => {
+      seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const ease = (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+  const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+
+  function dot(ctx: Ctx, x: number, y: number, r: number, color: string, alpha = 1) {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // 1. Scattered cells settle into clusters, hold, then scatter again.
+  function clusters(): Scene {
+    const r = rng(7), g = () => { let u = 0, v = 0; while (!u) u = r(); while (!v) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+    const centres = [[0.22, 0.32], [0.62, 0.26], [0.34, 0.72], [0.78, 0.66]];
+    const pts = Array.from({ length: 120 }, (_, i) => {
+      const c = i % centres.length;
+      return { c, sx: 0.05 + r() * 0.9, sy: 0.08 + r() * 0.84, tx: centres[c][0] + g() * 0.06, ty: centres[c][1] + g() * 0.08, d: r() * 0.7 };
+    });
+    const P = 7;
+    return {
+      still: 4,
+      draw(ctx, w, h, t) {
+        const s = t % P;
+        for (const p of pts) {
+          const k = ease(clamp01((s - 0.8 - p.d) / 1.6)) * (1 - ease(clamp01((s - 5.3 - p.d * 0.5) / 1.4)));
+          const breathe = Math.sin(t * 1.3 + p.d * 9) * 0.006 * k;
+          const x = (p.sx + (p.tx - p.sx) * k + breathe) * w;
+          const y = (p.sy + (p.ty - p.sy) * k + breathe) * h;
+          dot(ctx, x, y, 2.6, theme.muted, 0.45 * (1 - k));
+          dot(ctx, x, y, 2.6, PALETTE[[1, 0, 2, 4][p.c]], 0.9 * k);
+        }
+      },
+    };
+  }
+
+  // 2. A mutant clone appears and spreads; a more aggressive subclone emerges inside it.
+  function evolution(): Scene {
+    const r = rng(11);
+    const cols = 19, rows = 9;
+    const pts: { x: number; y: number; tA: number; tB: number }[] = [];
+    const seedA = [0.26, 0.55], seedB = [0.42, 0.42];
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const x = 0.05 + (i + (j % 2) * 0.5) / (cols - 0.5) * 0.9 + (r() - 0.5) * 0.012;
+      const y = 0.1 + (j / (rows - 1)) * 0.8 + (r() - 0.5) * 0.02;
+      const dA = Math.hypot((x - seedA[0]) * 2, y - seedA[1]);
+      const dB = Math.hypot((x - seedB[0]) * 2, y - seedB[1]);
+      pts.push({ x, y, tA: 0.6 + dA * 2.6 + r() * 0.5, tB: 3.8 + dB * 2.4 + r() * 0.5 });
+    }
+    const P = 10.5, fade = 1.1;
+    return {
+      still: 6.2,
+      draw(ctx, w, h, t) {
+        const s = t % P;
+        const out = clamp01((s - (P - fade)) / fade);
+        const rad = Math.max(2.4, Math.min(3.6, w / 110));
+        for (const p of pts) {
+          let color = theme.muted, alpha = 0.35, since = -1;
+          if (s >= p.tB) { color = PALETTE[3]; alpha = 0.95; since = s - p.tB; }
+          else if (s >= p.tA) { color = PALETTE[0]; alpha = 0.9; since = s - p.tA; }
+          const pulse = since >= 0 ? 1 + 0.9 * Math.exp(-since * 5) : 1;
+          const x = p.x * w, y = p.y * h;
+          if (out > 0 && since >= 0) {
+            dot(ctx, x, y, rad, theme.muted, 0.35 * out);
+            dot(ctx, x, y, rad, color, alpha * (1 - out));
+          } else {
+            dot(ctx, x, y, rad * pulse, color, alpha);
+          }
+        }
+      },
+    };
+  }
+
+  // 3. Patients flow down a decision tree and collect in colour-coded subgroups.
+  function tree(): Scene {
+    const r = rng(23);
+    const root = [0.5, 0.1];
+    const mid = [[0.29, 0.4], [0.71, 0.4]];
+    const leaves = [[0.13, 0.68], [0.41, 0.68], [0.59, 0.68], [0.87, 0.68]];
+    const colors = [PALETTE[1], PALETTE[0], PALETTE[2], PALETTE[4]];
+    type Mover = { leaf: number; born: number; jx: number };
+    type Settled = { leaf: number; x: number; y: number; born: number };
+    let movers: Mover[] = [];
+    const piles: Settled[][] = leaves.map(() => []);
+    let nextSpawn = 0;
+    const travel = 1.7, maxPile = 16;
+    const pileSpot = (leaf: number, n: number) => {
+      const col = n % 4, row = Math.floor(n / 4);
+      return [leaves[leaf][0] + (col - 1.5) * 0.024 + (r() - 0.5) * 0.006, 0.8 + row * 0.055];
+    };
+    // start with partly filled piles so the scene is never empty
+    leaves.forEach((_, l) => { for (let n = 0; n < 6 + l; n++) { const [x, y] = pileSpot(l, n); piles[l].push({ leaf: l, x, y, born: -10 }); } });
+    const pos = (m: Mover, k: number): [number, number] => {
+      const a = mid[m.leaf < 2 ? 0 : 1], b = leaves[m.leaf];
+      if (k < 0.5) { const e = ease(k * 2); return [root[0] + (a[0] - root[0]) * e, root[1] + (a[1] - root[1]) * e]; }
+      const e = ease((k - 0.5) * 2); return [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e];
+    };
+    return {
+      still: 0,
+      draw(ctx, w, h, t) {
+        // branches
+        ctx.strokeStyle = theme.border;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (const [i, a] of mid.entries()) {
+          ctx.moveTo(root[0] * w, root[1] * h); ctx.lineTo(a[0] * w, a[1] * h);
+          for (const l of [i * 2, i * 2 + 1]) { ctx.moveTo(a[0] * w, a[1] * h); ctx.lineTo(leaves[l][0] * w, leaves[l][1] * h); }
+        }
+        ctx.stroke();
+        dot(ctx, root[0] * w, root[1] * h, 4, theme.muted, 0.8);
+        mid.forEach((a) => dot(ctx, a[0] * w, a[1] * h, 3.5, theme.muted, 0.7));
+        leaves.forEach((l, i) => dot(ctx, l[0] * w, l[1] * h, 3.5, colors[i], 0.9));
+
+        if (!reduced) {
+          if (t >= nextSpawn) {
+            const u = r();
+            movers.push({ leaf: u < 0.3 ? 0 : u < 0.55 ? 1 : u < 0.8 ? 2 : 3, born: t, jx: (r() - 0.5) * 0.01 });
+            nextSpawn = t + 0.32 + r() * 0.2;
+          }
+          movers = movers.filter((m) => {
+            const k = (t - m.born) / travel;
+            if (k >= 1) {
+              const pile = piles[m.leaf];
+              if (pile.length >= maxPile) pile.splice(0, 4);
+              pile.forEach((p, n) => { const [x, y] = pileSpot(m.leaf, n); p.x = x; p.y = y; });
+              const [x, y] = pileSpot(m.leaf, pile.length);
+              pile.push({ leaf: m.leaf, x, y, born: t });
+              return false;
+            }
+            const [x, y] = pos(m, k);
+            const c = k < 0.5 ? theme.muted : colors[m.leaf];
+            dot(ctx, (x + m.jx) * w, y * h, 2.8, c, k < 0.5 ? 0.7 : 0.95);
+            return true;
+          });
+        }
+        for (const pile of piles) for (const p of pile) {
+          const pop = clamp01((t - p.born) / 0.25);
+          dot(ctx, p.x * w, p.y * h, 2.6 * (0.6 + 0.4 * pop), colors[p.leaf], 0.9);
+        }
+      },
+    };
+  }
+
+  const makers = { clusters, evolution, tree } as const;
+
+  document.querySelectorAll<HTMLCanvasElement>('canvas[data-anim]').forEach((canvas) => {
+    const kind = canvas.dataset.anim as keyof typeof makers;
+    const scene = makers[kind]?.();
+    if (!scene) return;
+    const ctx = canvas.getContext('2d')!;
+    let w = 0, h = 0, visible = false, raf = 0, t = scene.still, last = 0;
+
+    const render = (dt = 0) => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      scene.draw(ctx, w, h, t, dt);
+    };
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = rect.width; h = rect.height;
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+      render();
+    };
+    const loop = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now; t += dt;
+      render(dt);
+      if (visible) raf = requestAnimationFrame(loop);
+    };
+    const start = () => { if (reduced || raf) return; last = performance.now(); raf = requestAnimationFrame(loop); };
+    const stop = () => { cancelAnimationFrame(raf); raf = 0; };
+
+    new ResizeObserver(resize).observe(canvas);
+    new IntersectionObserver(([e]) => { visible = e.isIntersecting; visible ? start() : stop(); }).observe(canvas);
+    new MutationObserver(() => { readTheme(); render(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    document.addEventListener('visibilitychange', () => (document.hidden ? stop() : visible && start()));
+    resize();
+  });
+</script>
+
+<style>
+  .ranim {
+    margin: -0.4rem -0.4rem 1rem;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 1;
+  }
+</style>
