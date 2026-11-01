@@ -7,10 +7,14 @@
 //   tree      — patients flow down a decision tree into subgroups;
 //               bar charts below show each group's response to three compounds
 //   risk      — a risk variant opens up DNA (chromatin peaks) and raises gene activity
-//   niche     — dendritic cells signal to stem cells in tissue; an inhibitor blocks it
-//   response  — cells mature towards red blood cells; non-responders stall;
-//               signature scores separate responders from non-responders
-interface Props { kind: 'clusters' | 'evolution' | 'tree' | 'risk' | 'niche' | 'response' }
+//   niche     — zoom from a tissue section into its cells; dendritic cells signal to stem
+//               cells, then an inhibitor blocks the signal
+//   response  — patients coloured by a signature score sort into transfusion-free vs
+//               still transfused after treatment
+//   clones    — bulk gives one blended number; single cells reveal one- vs two-hit clones
+//   antibody  — B cells whose antibodies bind a virus expand; candidates are collected
+//   pipeline  — samples flow through a workflow; steps light up; same result every run
+interface Props { kind: 'clusters' | 'evolution' | 'tree' | 'risk' | 'niche' | 'response' | 'clones' | 'antibody' | 'pipeline' }
 const { kind } = Astro.props;
 ---
 <div class="ranim">
@@ -433,9 +437,32 @@ const { kind } = Astro.props;
     };
   }
 
-  // 5. Cell cross-talk in tissue: dendritic cells signal to stem cells; an inhibitor blocks it.
+  // 5. Cell cross-talk in tissue: start from a whole tissue section, zoom into a region, watch
+  //    dendritic cells signal to stem cells, block the signal with an inhibitor, zoom back out.
   function niche(): Scene {
     const r = rng(41);
+    // overview: an organic tissue outline filled with tiny cells
+    const outline = Array.from({ length: 48 }, (_, i) => {
+      const a = (i / 48) * Math.PI * 2;
+      const rad = 1 + 0.12 * Math.sin(a * 3 + 0.7) + 0.07 * Math.sin(a * 5 + 2) + (r() - 0.5) * 0.04;
+      return [0.5 + Math.cos(a) * 0.38 * rad, 0.4 + Math.sin(a) * 0.3 * rad];
+    });
+    const inside = (x: number, y: number) => {
+      let c = false;
+      for (let i = 0, j = outline.length - 1; i < outline.length; j = i++) {
+        const [xi, yi] = outline[i], [xj, yj] = outline[j];
+        if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
+      }
+      return c;
+    };
+    const specks: { x: number; y: number; k: number }[] = [];
+    while (specks.length < 260) {
+      const x = r(), y = r() * 0.8;
+      if (inside(x, y)) specks.push({ x, y, k: r() < 0.06 ? 1 : r() < 0.1 ? 2 : 0 });
+    }
+    const box = { x: 0.58, y: 0.28, w: 0.2, h: 0.2 }; // region we zoom into (fractions of canvas)
+
+    // zoomed view: packed cells; dendritic cells are plain circles like the rest
     const cols = 14, rows = 7;
     type Cell = { x: number; y: number; kind: 0 | 1 | 2; act: number; links: number[] };
     const cells: Cell[] = [];
@@ -449,158 +476,439 @@ const { kind } = Astro.props;
       const near = cells.map((c, i) => [Math.hypot((c.x - cells[d].x) * 1.4, c.y - cells[d].y), i]).filter(([, i]) => cells[i].kind === 0).sort((a, b) => a[0] - b[0]).slice(1, 3);
       near.forEach(([, i]) => { cells[i].kind = 2; cells[d].links.push(i); });
     });
+    // stromal cells next to stem cells that can become stem cells while signalling is on
+    const stemIdx = cells.map((c, i) => (c.kind === 2 ? i : -1)).filter((i) => i >= 0);
+    const candidates = cells
+      .map((c, i) => ({ i, d: c.kind === 0 ? Math.min(...stemIdx.map((k) => Math.hypot((cells[k].x - c.x) * 1.4, cells[k].y - c.y))) : 9 }))
+      .filter((c) => c.d < 0.16)
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 16)
+      .map((c) => c.i);
+    const rank = new Map(candidates.map((i, k) => [i, k]));
     type Sig = { from: number; to: number; born: number; blocked: boolean };
     let sigs: Sig[] = [];
     let next = 0;
-    const P = 11;
+    const P = 14;
     return {
-      still: 3,
+      still: 5,
       draw(ctx, w, h, t) {
         const s = t % P;
-        const inhib = s > 5.5 && s < 9.6;
-        const rad = Math.max(5, Math.min(9, w / 34));
-        // signals
-        if (!reduced && t >= next) {
-          const d = dcs[Math.floor(r() * dcs.length)];
-          const to = cells[d].links[Math.floor(r() * cells[d].links.length)];
-          sigs.push({ from: d, to, born: t, blocked: inhib });
-          next = t + 0.12 + r() * 0.12;
+        const zoom = ease(clamp01((s - 2.0) / 1.3)) * (1 - ease(clamp01((s - 12.4) / 1.3)));
+        const inhib = s > 8.2 && s < 11.8;
+        const active = zoom > 0.98;
+        // stem-cell expansion level: grows with signalling, falls back under the inhibitor
+        const expand = reduced ? 0.7 : ease(clamp01((s - 3.6) / 4.2)) * (1 - ease(clamp01((s - 8.4) / 2.4)));
+        const extra = expand * candidates.length;
+
+        // overview layer
+        if (zoom < 1) {
+          const a = 1 - zoom;
+          ctx.globalAlpha = a;
+          ctx.beginPath();
+          outline.forEach(([x, y], i) => (i ? ctx.lineTo(x * w, y * h) : ctx.moveTo(x * w, y * h)));
+          ctx.closePath();
+          ctx.fillStyle = C.purple; ctx.globalAlpha = 0.14 * a; ctx.fill();
+          ctx.strokeStyle = C.purple; ctx.globalAlpha = 0.5 * a; ctx.lineWidth = 1.5; ctx.stroke();
+          ctx.globalAlpha = 1;
+          for (const p of specks) dot(ctx, p.x * w, p.y * h, 1.4, p.k === 1 ? C.teal : p.k === 2 ? C.orange : theme.muted, (p.k ? 0.9 : 0.4) * a);
+          const pulse = 0.5 + 0.5 * Math.sin(t * 4);
+          ctx.strokeStyle = theme.text; ctx.globalAlpha = (0.5 + 0.4 * pulse) * a; ctx.lineWidth = 1.5;
+          roundRect(ctx, box.x * w, box.y * h, box.w * w, box.h * h, 4); ctx.stroke();
+          ctx.globalAlpha = 1;
+          label(ctx, 'Bone marrow section', w * 0.05, h * 0.06, { size: 9, weight: 650, color: theme.text });
+          if (a > 0.5) label(ctx, 'zoom in', (box.x + box.w + 0.02) * w, (box.y + 0.02) * h, { size: 8.5 });
         }
-        for (const c of cells) c.act *= Math.exp(-0.9 * (1 / 60));
-        // cells
-        for (const c of cells) {
-          const x = c.x * w, y = c.y * h;
-          if (c.kind === 0) {
-            ctx.strokeStyle = theme.border; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.arc(x, y, rad * 0.85, 0, Math.PI * 2); ctx.stroke();
-            dot(ctx, x, y, rad * 0.85, theme.muted, 0.08);
+
+        // zoomed layer: map the full view from the zoom box (zoom = 0) to the whole canvas (zoom = 1)
+        if (zoom > 0) {
+          const viewH = h * 0.78;
+          const sx = box.w * w / w, sy = box.h * h / viewH;
+          const kx = sx + (1 - sx) * zoom, ky = sy + (1 - sy) * zoom;
+          const ox = box.x * w * (1 - zoom), oy = box.y * h * (1 - zoom);
+          const X = (x: number) => ox + x * w * kx;
+          const Y = (y: number) => oy + y * viewH * ky;
+          const rad = Math.max(5, Math.min(9, w / 34)) * Math.min(kx, ky);
+          ctx.save();
+          ctx.beginPath(); ctx.rect(X(0), Y(0), w * kx, viewH * ky); ctx.clip();
+          ctx.globalAlpha = zoom;
+          ctx.fillStyle = theme.surface; ctx.fillRect(X(0), Y(0), w * kx, viewH * ky);
+          ctx.globalAlpha = 1;
+
+          if (!reduced && active && t >= next) {
+            const d = dcs[Math.floor(r() * dcs.length)];
+            sigs.push({ from: d, to: cells[d].links[Math.floor(r() * cells[d].links.length)], born: t, blocked: inhib });
+            next = t + 0.12 + r() * 0.12;
           }
-        }
-        for (const c of cells) {
-          const x = c.x * w, y = c.y * h;
-          if (c.kind === 2) {
-            const scale = inhib ? 0.78 : 1;
-            const glow = Math.min(1, c.act);
-            if (glow > 0.05) dot(ctx, x, y, rad * (1.5 + glow * 0.6), C.orange, 0.18 * glow);
-            dot(ctx, x, y, rad * scale, C.orange, inhib ? 0.5 : 0.95);
-          } else if (c.kind === 1) {
-            ctx.strokeStyle = C.teal; ctx.lineWidth = 1.6;
-            for (let k = 0; k < 6; k++) {
-              const a = (k / 6) * Math.PI * 2 + 0.3;
-              ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * rad * 1.5, y + Math.sin(a) * rad * 1.5); ctx.stroke();
+          if (!active) sigs = [];
+          for (const c of cells) c.act *= 0.985;
+
+          for (const c of cells) {
+            const x = X(c.x), y = Y(c.y);
+            if (c.kind === 0) {
+              ctx.strokeStyle = theme.border; ctx.lineWidth = 1; ctx.globalAlpha = zoom;
+              ctx.beginPath(); ctx.arc(x, y, rad * 0.85, 0, Math.PI * 2); ctx.stroke();
+              ctx.globalAlpha = 1;
+              dot(ctx, x, y, rad * 0.85, theme.muted, 0.08 * zoom);
+              const k = rank.get(cells.indexOf(c));
+              if (k !== undefined) {
+                const f = clamp01(extra - k); // 0..1: how far this cell has turned into a stem cell
+                if (f > 0) dot(ctx, x, y, rad * 0.85 * (0.4 + 0.6 * f) * (inhib ? 0.8 : 1), C.orange, (inhib ? 0.5 : 0.9) * f * zoom);
+              }
+            } else if (c.kind === 1) {
+              dot(ctx, x, y, rad * 0.85, C.teal, zoom);
+            } else {
+              const glow = Math.min(1, c.act);
+              if (glow > 0.05) dot(ctx, x, y, rad * (1.4 + glow * 0.6), C.orange, 0.2 * glow * zoom);
+              dot(ctx, x, y, rad * 0.85 * (inhib ? 0.8 : 1), C.orange, (inhib ? 0.5 : 0.95) * zoom);
             }
-            dot(ctx, x, y, rad * 0.75, C.teal, 1);
           }
-        }
-        // signal particles
-        sigs = sigs.filter((g) => {
-          const k = (t - g.born) / 0.9;
-          const a = cells[g.from], b = cells[g.to];
-          const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2 - 0.06;
-          const lim = g.blocked ? 0.5 : 1;
-          if (k >= lim) {
-            if (!g.blocked) { b.act += 0.6; return false; }
-            if (k > 1.1) return false;
-            const [x, y] = bez([a.x, a.y], [mx, my], [mx, my], [b.x, b.y], 0.5);
-            ctx.strokeStyle = C.red; ctx.lineWidth = 1.5; ctx.globalAlpha = 1 - (k - 0.5) / 0.6;
-            const X = x * w, Y = y * h, q = 3;
-            ctx.beginPath(); ctx.moveTo(X - q, Y - q); ctx.lineTo(X + q, Y + q); ctx.moveTo(X + q, Y - q); ctx.lineTo(X - q, Y + q); ctx.stroke();
-            ctx.globalAlpha = 1;
+          sigs = sigs.filter((g) => {
+            const k = (t - g.born) / 0.9;
+            const a = cells[g.from], b = cells[g.to];
+            const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2 - 0.06;
+            if (g.blocked && k >= 0.5) {
+              if (k > 1.1) return false;
+              const [x, y] = bez([a.x, a.y], [mx, my], [mx, my], [b.x, b.y], 0.5);
+              const XX = X(x), YY = Y(y), q = 3;
+              ctx.strokeStyle = C.red; ctx.lineWidth = 1.5; ctx.globalAlpha = 1 - (k - 0.5) / 0.6;
+              ctx.beginPath(); ctx.moveTo(XX - q, YY - q); ctx.lineTo(XX + q, YY + q); ctx.moveTo(XX + q, YY - q); ctx.lineTo(XX - q, YY + q); ctx.stroke();
+              ctx.globalAlpha = 1;
+              return true;
+            }
+            if (k >= 1) { b.act += 0.6; return false; }
+            const [x, y] = bez([a.x, a.y], [mx, my], [mx, my], [b.x, b.y], k);
+            dot(ctx, X(x), Y(y), 2.2, C.teal, 0.95);
             return true;
-          }
-          const [x, y] = bez([a.x, a.y], [mx, my], [mx, my], [b.x, b.y], k);
-          dot(ctx, x * w, y * h, 2.2, C.teal, 0.95);
-          return true;
-        });
-        // legend + status
-        const ly = h * 0.86;
-        const items: [string, string][] = [['Dendritic cell', C.teal], ['Stem cell', C.orange], ['Stroma', theme.muted]];
-        let lx = w * 0.05;
-        ctx.font = `500 8.5px ${theme.font}`;
-        for (const [n, col] of items) {
-          dot(ctx, lx + 3, ly, 3.2, col, col === theme.muted ? 0.4 : 1);
-          label(ctx, n, lx + 10, ly, { size: 8.5 });
-          lx += 18 + ctx.measureText(n).width + 6;
-        }
-        pill(ctx, w * 0.8, h * 0.95 - 4, inhib ? 'Inhibitor on' : 'Signalling', inhib ? C.red : C.teal, '#ffffff', 8.5);
-      },
-    };
-  }
-
-  // 6. Treatment response: cells mature along a path; non-responders stall; signature scores separate.
-  function response(): Scene {
-    const r = rng(53), g = () => { let u = 0, v = 0; while (!u) u = r(); while (!v) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
-    const p0 = [0.06, 0.4], p1 = [0.3, 0.02], p2 = [0.62, 0.62], p3 = [0.94, 0.18];
-    const block = 0.52;
-    type Cell = { resp: boolean; born: number; jx: number; jy: number };
-    let movers: Cell[] = [];
-    let stuck: { x: number; y: number; born: number }[] = [];
-    const strips: { resp: { x: number; born: number }[]; non: { x: number; born: number }[] } = { resp: [], non: [] };
-    const score = (resp: boolean) => clamp01((resp ? 0.3 : 0.72) + g() * 0.09);
-    for (let i = 0; i < 16; i++) { strips.resp.push({ x: score(true), born: -10 }); strips.non.push({ x: score(false), born: -10 }); }
-    const [bx, by] = bez(p0, p1, p2, p3, block);
-    for (let i = 0; i < 10; i++) stuck.push({ x: bx + g() * 0.025, y: by + g() * 0.03, born: -10 });
-    let next = 0;
-    return {
-      still: 0,
-      draw(ctx, w, h, t) {
-        // maturation path
-        const grad = ctx.createLinearGradient(w * p0[0], 0, w * p3[0], 0);
-        grad.addColorStop(0, C.orange); grad.addColorStop(1, C.red);
-        ctx.strokeStyle = grad; ctx.globalAlpha = 0.28; ctx.lineWidth = Math.max(8, h * 0.05); ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(w * p0[0], h * p0[1]);
-        ctx.bezierCurveTo(w * p1[0], h * p1[1], w * p2[0], h * p2[1], w * p3[0], h * p3[1]); ctx.stroke();
-        ctx.globalAlpha = 1;
-        label(ctx, 'Stem cell', w * p0[0], h * (p0[1] + 0.09), { size: 8.5, weight: 650, color: C.orange });
-        label(ctx, 'Red blood cell', w * p3[0], h * (p3[1] - 0.1), { size: 8.5, weight: 650, color: C.red, align: 'right' });
-        // block marker
-        ctx.strokeStyle = C.purple; ctx.globalAlpha = 0.6; ctx.lineWidth = 1.2; ctx.setLineDash([3, 3]);
-        ctx.beginPath(); ctx.arc(w * bx, h * by, Math.max(14, w * 0.05), 0, Math.PI * 2); ctx.stroke();
-        ctx.setLineDash([]); ctx.globalAlpha = 1;
-
-        if (!reduced && t >= next) {
-          const resp = r() < 0.5;
-          movers.push({ resp, born: t, jx: g() * 0.012, jy: g() * 0.02 });
-          (resp ? strips.resp : strips.non).push({ x: score(resp), born: t });
-          if (strips.resp.length > 26) strips.resp.shift();
-          if (strips.non.length > 26) strips.non.shift();
-          next = t + 0.28 + r() * 0.12;
-        }
-        movers = movers.filter((m) => {
-          const k = (t - m.born) / 3.2;
-          if (!m.resp && k >= block) {
-            stuck.push({ x: bx + g() * 0.025, y: by + g() * 0.03, born: t });
-            if (stuck.length > 22) stuck.shift();
-            return false;
-          }
-          if (k >= 1) return false;
-          const [x, y] = bez(p0, p1, p2, p3, k);
-          dot(ctx, (x + m.jx) * w, (y + m.jy) * h, 2.8, m.resp ? C.green : C.purple, 0.95);
-          return true;
-        });
-        stuck.forEach((c, i) => dot(ctx, c.x * w, c.y * h, 2.6, C.purple, 0.35 + 0.6 * (i / stuck.length)));
-
-        // signature score strips
-        const ax0 = w * 0.36, ax1 = w * 0.95;
-        const rows: [string, { x: number; born: number }[], string, number][] = [['Responders', strips.resp, C.green, 0.74], ['Non-responders', strips.non, C.purple, 0.86]];
-        ctx.strokeStyle = theme.border; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
-        ctx.beginPath(); ctx.moveTo(w * 0.04, h * 0.66); ctx.lineTo(w * 0.96, h * 0.66); ctx.stroke(); ctx.setLineDash([]);
-        for (const [name, pts, col, yy] of rows) {
-          const y = h * yy;
-          label(ctx, name, ax0 - 8, y, { size: 8.5, align: 'right', color: col, weight: 650 });
-          ctx.strokeStyle = theme.border; ctx.beginPath(); ctx.moveTo(ax0, y); ctx.lineTo(ax1, y); ctx.stroke();
-          pts.forEach((p, i) => {
-            const pop = clamp01((t - p.born) / 0.3);
-            const jitter = ((i * 37) % 7 - 3) * 1.1;
-            dot(ctx, ax0 + p.x * (ax1 - ax0), y + jitter, 2.5 * (0.5 + 0.5 * pop), col, 0.85);
           });
+          ctx.restore();
+          ctx.strokeStyle = theme.text; ctx.globalAlpha = 0.5 * (1 - zoom); ctx.lineWidth = 1.5;
+          roundRect(ctx, X(0), Y(0), w * kx, viewH * ky, 4); ctx.stroke();
+          ctx.globalAlpha = 1;
         }
-        label(ctx, 'signature score →', ax1, h * 0.95, { size: 8.5, align: 'right' });
+
+        // legend + status (cell view only)
+        if (zoom > 0.6) {
+          const a = (zoom - 0.6) / 0.4;
+          ctx.globalAlpha = a;
+          const ly = h * 0.86;
+          const items: [string, string][] = [['Dendritic cell', C.teal], ['Stem cell', C.orange], ['Stroma', theme.muted]];
+          let lx = w * 0.05;
+          ctx.font = `500 8.5px ${theme.font}`;
+          for (const [n, col] of items) {
+            dot(ctx, lx + 3, ly, 3.2, col, (col === theme.muted ? 0.4 : 1) * a);
+            label(ctx, n, lx + 10, ly, { size: 8.5 });
+            lx += 18 + ctx.measureText(n).width + 6;
+          }
+          ctx.globalAlpha = 1;
+          ctx.globalAlpha = a;
+          label(ctx, `Stem cells: ${stemIdx.length + Math.floor(extra)}`, w * 0.95, ly, { size: 8.5, align: 'right', weight: 650, color: C.orange });
+          ctx.globalAlpha = 1;
+          pill(ctx, w * 0.8, h * 0.95 - 4, inhib ? 'Inhibitor on' : 'Signalling', inhib ? C.red : C.teal, '#ffffff', 8.5, a);
+        }
       },
     };
   }
 
-  const makers = { clusters, evolution, tree, risk, niche, response } as const;
+  // 6. Treatment response: each patient has a signature score before treatment (low = green,
+  //    high = purple). After treatment, low scorers become transfusion-free; high scorers don't.
+  function response(): Scene {
+    const r = rng(53);
+    const mix = (a: string, b: string, k: number) => {
+      const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
+      const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
+      return `rgb(${pa.map((v, i) => Math.round(v + (pb[i] - v) * k)).join(',')})`;
+    };
+    const scoreColor = (s: number) => (s < 0.5 ? mix(C.green, '#a9d39f', s / 0.5) : mix('#d8b5cf', C.purple, (s - 0.5) / 0.5));
+    // 12 patients with scores; low scores (< 0.5) respond
+    const patients = Array.from({ length: 12 }, (_, i) => {
+      const score = clamp01(i < 6 ? 0.12 + r() * 0.3 : 0.58 + r() * 0.32);
+      return { score, order: r(), responds: score < 0.5 };
+    }).sort((a, b) => a.order - b.order);
+    patients.forEach((p, i) => Object.assign(p, { col: i % 3, row: Math.floor(i / 3) }));
+    const P = 10.5, start = 1.0, stagger = 0.42, travel = 0.9;
+    return {
+      still: 8.4,
+      draw(ctx, w, h, t) {
+        const s = t % P;
+        const out = ease(clamp01((s - 9.6) / 0.9));
+        const vis = 1 - out;
+
+        // score legend
+        const gx0 = w * 0.06, gx1 = w * 0.34, gy = h * 0.07;
+        label(ctx, 'Signature score', gx0, gy - 1, { size: 8.5, weight: 650 });
+        const gb = ctx.createLinearGradient(gx0, 0, gx1, 0);
+        gb.addColorStop(0, C.green); gb.addColorStop(0.49, '#a9d39f'); gb.addColorStop(0.51, '#d8b5cf'); gb.addColorStop(1, C.purple);
+        ctx.fillStyle = gb; roundRect(ctx, gx0, gy + 7, gx1 - gx0, 5, 2.5); ctx.fill();
+        label(ctx, 'low', gx0, gy + 19, { size: 8 });
+        label(ctx, 'high', gx1, gy + 19, { size: 8, align: 'right' });
+
+        // columns: before (left), treatment arrow, outcomes (right)
+        const leftX = w * 0.2, cell = Math.min(w * 0.075, h * 0.1);
+        const gridTop = h * 0.36;
+        label(ctx, 'Before', leftX, h * 0.3, { size: 9, weight: 650, color: theme.text, align: 'center' });
+        const arrowY = h * 0.56;
+        ctx.strokeStyle = theme.border; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(w * 0.36, arrowY); ctx.lineTo(w * 0.52, arrowY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(w * 0.52, arrowY); ctx.lineTo(w * 0.5, arrowY - 4); ctx.lineTo(w * 0.5, arrowY + 4); ctx.closePath(); ctx.fillStyle = theme.border; ctx.fill();
+        pill(ctx, w * 0.44, arrowY - 12, 'treatment', theme.text, theme.surface, 8);
+
+        const boxes = [
+          { name: 'Transfusion-free', col: C.green, y: h * 0.24, filled: 0 },
+          { name: 'Still transfused', col: C.purple, y: h * 0.6, filled: 0 },
+        ];
+        const bx = w * 0.56, bw = w * 0.4, bh = h * 0.3;
+        for (const b of boxes) {
+          ctx.strokeStyle = b.col; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.7;
+          roundRect(ctx, bx, b.y, bw, bh, 8); ctx.stroke();
+          ctx.globalAlpha = 0.08; ctx.fillStyle = b.col; roundRect(ctx, bx, b.y, bw, bh, 8); ctx.fill();
+          ctx.globalAlpha = 1;
+          label(ctx, b.name, bx + 8, b.y + 10, { size: 8.5, weight: 650, color: b.col });
+        }
+
+        const appear = ease(clamp01(s / 0.6)) * vis;
+        patients.forEach((p, i) => {
+          const sx = leftX + ((p as any).col - 1) * cell, sy = gridTop + (p as any).row * cell;
+          const k = reduced ? 1 : ease(clamp01((s - start - i * stagger) / travel));
+          const b = boxes[p.responds ? 0 : 1];
+          const n = b.filled++;
+          const tx = bx + 16 + (n % 6) * (bw - 26) / 5, ty = b.y + bh * 0.62 + (n >= 6 ? 12 : 0);
+          const x = sx + (tx - sx) * k, y = sy + (ty - sy) * k - Math.sin(k * Math.PI) * h * 0.06;
+          if (k < 1 && k > 0) dot(ctx, x, y, 7, scoreColor(p.score), 0.12 * appear);
+          dot(ctx, x, y, Math.max(3.5, cell * 0.28), scoreColor(p.score), appear);
+        });
+        const done = clamp01((s - (start + patients.length * stagger + travel)) / 0.5) * vis;
+        if (done > 0) {
+          ctx.globalAlpha = done;
+          label(ctx, 'Low score → responds', w * 0.06, h * 0.93, { size: 9, weight: 650, color: C.green });
+          label(ctx, 'High score → doesn’t', w * 0.96, h * 0.93, { size: 9, weight: 650, color: C.purple, align: 'right' });
+          ctx.globalAlpha = 1;
+        }
+      },
+    };
+  }
+
+  // 7. Clones cell by cell: bulk sequencing gives one blended number; single-cell DNA reveals
+  //    which cells carry one hit or two hits on the same gene.
+  function clones(): Scene {
+    const r = rng(61);
+    const cols = 12, rows = 4;
+    const cells = Array.from({ length: cols * rows }, (_, i) => {
+      const u = r();
+      return { col: i % cols, row: Math.floor(i / cols), hits: u < 0.4 ? 0 : u < 0.7 ? 1 : 2 };
+    });
+    const counts = [0, 1, 2].map((k) => cells.filter((c) => c.hits === k).length);
+    const P = 10;
+    return {
+      still: 7,
+      draw(ctx, w, h, t) {
+        const s = t % P;
+        const out = ease(clamp01((s - 8.9) / 1.0));
+        const vis = 1 - out;
+        // bulk bar
+        label(ctx, 'Bulk sequencing', w * 0.05, h * 0.07, { size: 8.5, weight: 650, color: theme.text });
+        const bx = w * 0.05, bw = w * 0.9, bh = Math.max(8, h * 0.05), by = h * 0.11;
+        ctx.fillStyle = theme.border; ctx.globalAlpha = 0.6; roundRect(ctx, bx, by, bw, bh, 4); ctx.fill(); ctx.globalAlpha = 1;
+        const fill = ease(clamp01(s / 0.9)) * vis;
+        const gb = ctx.createLinearGradient(bx, 0, bx + bw * 0.45, 0);
+        gb.addColorStop(0, C.orange); gb.addColorStop(1, C.red);
+        ctx.fillStyle = gb; ctx.globalAlpha = 0.7; roundRect(ctx, bx, by, bw * 0.45 * fill, bh, 4); ctx.fill(); ctx.globalAlpha = 1;
+        label(ctx, '45% mutant reads, but in which cells?', w * 0.95, h * 0.07, { size: 8.5, align: 'right' });
+
+        // single cells, revealed by a sweep
+        label(ctx, 'Single cells (two copies of the gene each)', w * 0.05, h * 0.27, { size: 8.5, weight: 650, color: theme.text });
+        const gx0 = w * 0.07, gx1 = w * 0.93, gy0 = h * 0.35, gy1 = h * 0.63;
+        const rad = Math.min((gx1 - gx0) / cols, (gy1 - gy0) / rows) * 0.36;
+        const sweep = reduced ? 1 : clamp01((s - 1.1) / 3.6);
+        const tally = [0, 0, 0];
+        const hitColor = [theme.muted, C.orange, C.red];
+        for (const c of cells) {
+          const x = gx0 + (c.col + 0.5) * ((gx1 - gx0) / cols), y = gy0 + (c.row + 0.5) * ((gy1 - gy0) / (rows - 1)) - (gy1 - gy0) / (rows - 1) / 2;
+          const shown = (c.col + 0.5) / cols <= sweep;
+          if (shown && vis > 0) tally[c.hits]++;
+          // outline
+          ctx.strokeStyle = theme.border; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(x, y - rad); ctx.lineTo(x, y + rad); ctx.stroke();
+          if (!shown) { dot(ctx, x, y, rad, theme.muted, 0.12); continue; }
+          const left = c.hits >= 1 ? (c.hits === 2 ? C.red : C.orange) : theme.muted;
+          const right = c.hits === 2 ? C.red : theme.muted;
+          const a = vis;
+          for (const [col, a0, a1, alpha] of [[left, Math.PI / 2, (Math.PI * 3) / 2, c.hits ? 0.95 : 0.2], [right, -Math.PI / 2, Math.PI / 2, c.hits === 2 ? 0.95 : 0.2]] as const) {
+            ctx.globalAlpha = alpha * a; ctx.fillStyle = col;
+            ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, rad, a0, a1); ctx.closePath(); ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+        }
+        // sweep line
+        if (sweep > 0 && sweep < 1 && vis > 0) {
+          const sx = gx0 + sweep * (gx1 - gx0);
+          ctx.strokeStyle = theme.text; ctx.globalAlpha = 0.35; ctx.beginPath(); ctx.moveTo(sx, gy0 - rad - 4); ctx.lineTo(sx, gy1 + rad - 6); ctx.stroke(); ctx.globalAlpha = 1;
+        }
+        // tally
+        const names = ['No hit', 'One hit', 'Two hits'];
+        const tx = w * 0.3, tw = w * 0.62, th = Math.max(6, h * 0.04);
+        names.forEach((n, k) => {
+          const y = h * (0.75 + k * 0.08);
+          label(ctx, n, tx - 8, y + th / 2, { size: 8.5, align: 'right', color: k ? hitColor[k] : theme.muted, weight: 650 });
+          ctx.fillStyle = theme.border; ctx.globalAlpha = 0.5; roundRect(ctx, tx, y, tw, th, 3); ctx.fill(); ctx.globalAlpha = 1;
+          ctx.fillStyle = hitColor[k]; ctx.globalAlpha = k ? 0.9 : 0.45;
+          roundRect(ctx, tx, y, Math.max(0.1, tw * (tally[k] / Math.max(...counts))), th, 3); ctx.fill(); ctx.globalAlpha = 1;
+        });
+      },
+    };
+  }
+
+  // 8. Antibodies & infection: B cells around a virus; families whose antibodies bind expand,
+  //    and candidate antibodies are collected.
+  function antibody(): Scene {
+    const r = rng(71);
+    const fam = [C.blue, C.teal, C.purple, C.orange];
+    const binders = new Set([0, 1]);
+    const N = 12;
+    const cells = Array.from({ length: N }, (_, i) => {
+      const a = (i / N) * Math.PI * 2 + 0.2;
+      return { a, f: i % 4, jit: (r() - 0.5) * 0.15 };
+    });
+    const P = 10.5;
+    return {
+      still: 6.5,
+      draw(ctx, w, h, t) {
+        const s = t % P;
+        const out = ease(clamp01((s - 9.4) / 1.0));
+        const vis = 1 - out;
+        const cx = w * 0.5, cy = h * 0.36, vr = Math.min(w, h) * 0.085;
+        // virus with spikes
+        ctx.strokeStyle = C.red; ctx.lineWidth = 1.6;
+        for (let k = 0; k < 12; k++) {
+          const a = (k / 12) * Math.PI * 2 + t * 0.15;
+          const x0 = cx + Math.cos(a) * vr, y0 = cy + Math.sin(a) * vr;
+          const x1 = cx + Math.cos(a) * vr * 1.35, y1 = cy + Math.sin(a) * vr * 1.35;
+          ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+          dot(ctx, x1, y1, 2.4, C.red, 1);
+        }
+        dot(ctx, cx, cy, vr, C.red, 0.18);
+        ctx.beginPath(); ctx.arc(cx, cy, vr, 0, Math.PI * 2); ctx.stroke();
+        label(ctx, 'virus', cx, cy, { size: 8.5, align: 'center', color: C.red, weight: 650 });
+
+        const bind = ease(clamp01((s - 1.4) / 1.4)) * vis;
+        const grow = ease(clamp01((s - 3.2) / 2.2)) * vis;
+        const rx = w * 0.34, ry = h * 0.27, cr = Math.max(5, Math.min(8, w / 40));
+        const drawB = (x: number, y: number, ang: number, col: string, alpha: number, reach: number) => {
+          dot(ctx, x, y, cr, col, alpha);
+          // antibody "Y" pointing at the virus
+          const dx = Math.cos(ang), dy = Math.sin(ang);
+          const stem = cr * 0.9 + reach;
+          const sx = x + dx * cr, sy = y + dy * cr, ex = x + dx * stem * 1.6, ey = y + dy * stem * 1.6;
+          ctx.strokeStyle = col; ctx.globalAlpha = alpha; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey);
+          const arm = cr * 0.7;
+          ctx.moveTo(ex, ey); ctx.lineTo(ex + Math.cos(ang - 0.6) * arm, ey + Math.sin(ang - 0.6) * arm);
+          ctx.moveTo(ex, ey); ctx.lineTo(ex + Math.cos(ang + 0.6) * arm, ey + Math.sin(ang + 0.6) * arm);
+          ctx.stroke(); ctx.globalAlpha = 1;
+        };
+        for (const c of cells) {
+          const x = cx + Math.cos(c.a) * rx * (1 + c.jit), y = cy + Math.sin(c.a) * ry * (1 + c.jit);
+          const ang = Math.atan2(cy - y, cx - x);
+          const isB = binders.has(c.f);
+          const dist = Math.hypot(cx - x, cy - y) - vr * 1.35 - cr * 2.5;
+          if (isB && bind > 0.02) dot(ctx, x, y, cr * (1.6 + 0.3 * Math.sin(t * 5)), fam[c.f], 0.15 * bind);
+          drawB(x, y, ang, fam[c.f], isB ? 1 : 0.35 + 0.65 * (1 - bind), isB ? dist * bind * 0.55 : 0);
+          // clonal expansion: daughters appear beside binders
+          if (isB && grow > 0) {
+            for (let d = 1; d <= 2; d++) {
+              const off = c.a + (d === 1 ? 0.22 : -0.22);
+              const dx = cx + Math.cos(off) * rx * (1.18 + c.jit), dy = cy + Math.sin(off) * ry * (1.18 + c.jit);
+              dot(ctx, dx, dy, cr * 0.8 * clamp01(grow * 1.5 - (d - 1) * 0.4), fam[c.f], 0.85);
+            }
+          }
+        }
+        // candidate antibodies collected below
+        const collected = Math.floor(clamp01((s - 5.2) / 2.6) * 8 * vis);
+        label(ctx, 'Candidate antibodies', w * 0.05, h * 0.86, { size: 8.5, weight: 650, color: theme.text });
+        for (let k = 0; k < 8; k++) {
+          const x = w * (0.44 + k * 0.065), y = h * 0.86;
+          const col = fam[k % 2];
+          ctx.strokeStyle = k < collected ? col : theme.border; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(x, y + 6); ctx.lineTo(x, y); ctx.lineTo(x - 4, y - 5); ctx.moveTo(x, y); ctx.lineTo(x + 4, y - 5); ctx.stroke();
+        }
+      },
+    };
+  }
+
+  // 9. Reproducible pipelines: samples flow through a workflow; steps light up as they run.
+  function pipeline(): Scene {
+    const nodes = [
+      { name: 'Raw data', x: 0.1, y: 0.42 },
+      { name: 'QC', x: 0.29, y: 0.42 },
+      { name: 'Align', x: 0.5, y: 0.22 },
+      { name: 'Align', x: 0.5, y: 0.62 },
+      { name: 'Count', x: 0.71, y: 0.42 },
+      { name: 'Report', x: 0.9, y: 0.42 },
+    ];
+    const edges = [[0, 1], [1, 2], [1, 3], [2, 4], [3, 4], [4, 5]];
+    const N = 12, gapT = 0.42, seg = 0.42, dwell = 0.28;
+    const routes = Array.from({ length: N }, (_, i) => [0, 1, i % 2 ? 3 : 2, 4, 5]);
+    const P = 10.5;
+    const total = (routes[0].length - 1) * (seg + dwell);
+    return {
+      still: 9,
+      draw(ctx, w, h, t) {
+        const s = t % P;
+        const out = ease(clamp01((s - 9.5) / 0.9));
+        const vis = 1 - out;
+        const X = (n: number) => nodes[n].x * w, Y = (n: number) => nodes[n].y * h;
+        // edges
+        ctx.strokeStyle = theme.border; ctx.lineWidth = 2;
+        for (const [a, b] of edges) {
+          const xm = (X(a) + X(b)) / 2;
+          ctx.beginPath(); ctx.moveTo(X(a), Y(a)); ctx.bezierCurveTo(xm, Y(a), xm, Y(b), X(b), Y(b)); ctx.stroke();
+        }
+        // packets
+        const busy = new Array(nodes.length).fill(0);
+        let done = 0;
+        const moving: [number, number][] = [];
+        for (let i = 0; i < N; i++) {
+          const el = reduced ? total + 1 : s - 0.6 - i * gapT;
+          if (el < 0) continue;
+          if (el >= total) { done++; continue; }
+          const step = Math.floor(el / (seg + dwell)), within = el - step * (seg + dwell);
+          const a = routes[i][step], b = routes[i][step + 1];
+          if (within < dwell) { busy[a] = 1; continue; }
+          const k = ease((within - dwell) / seg);
+          const xm = (X(a) + X(b)) / 2;
+          const [x, y] = bez([X(a), Y(a)], [xm, Y(a)], [xm, Y(b)], [X(b), Y(b)], k);
+          moving.push([x, y]);
+        }
+        // nodes
+        // steps as small circles with labels underneath (leaves the connections free for samples)
+        const nr = Math.max(6, Math.min(9, w / 42));
+        const rects: number[][] = [];
+        nodes.forEach((n, i) => {
+          const x = X(i), y = Y(i);
+          rects.push([x - nr - 1, y - nr - 1, x + nr + 1, y + nr + 1]);
+          if (busy[i]) dot(ctx, x, y, nr + 5, C.teal, 0.18);
+          ctx.fillStyle = busy[i] ? C.teal : theme.surface;
+          ctx.beginPath(); ctx.arc(x, y, nr, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = busy[i] ? C.teal : theme.muted; ctx.lineWidth = 1.5; ctx.stroke();
+          label(ctx, n.name, x, y + nr + 9, { size: 8.5, align: 'center', color: busy[i] ? C.teal : theme.text, weight: 650 });
+        });
+        // moving samples drawn on top of the step boxes
+        moving
+          .filter(([x, y]) => !rects.some(([x0, y0, x1, y1]) => x > x0 && x < x1 && y > y0 && y < y1))
+          .forEach(([x, y]) => { dot(ctx, x, y, 4.2, theme.surface, vis); dot(ctx, x, y, 3.2, C.teal, vis); });
+        // progress
+        const px = w * 0.05, pw = w * 0.9, py = h * 0.82, ph = Math.max(6, h * 0.04);
+        ctx.globalAlpha = vis;
+        label(ctx, `Samples processed ${done}/${N}`, px, py - 9, { size: 8.5, weight: 650, color: theme.text });
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = theme.border; ctx.globalAlpha = 0.5; roundRect(ctx, px, py, pw, ph, 3); ctx.fill(); ctx.globalAlpha = 1;
+        ctx.fillStyle = C.teal; roundRect(ctx, px, py, Math.max(0.1, pw * (done / N) * vis), ph, 3); ctx.fill();
+        if (done === N && vis > 0) pill(ctx, w * 0.75, h * 0.93, 'Same result every run ✓', C.green, '#ffffff', 8.5, vis);
+      },
+    };
+  }
+
+  const makers = { clusters, evolution, tree, risk, niche, response, clones, antibody, pipeline } as const;
 
   document.querySelectorAll<HTMLCanvasElement>('canvas[data-anim]').forEach((canvas) => {
     const kind = canvas.dataset.anim as keyof typeof makers;

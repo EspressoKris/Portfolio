@@ -60,7 +60,7 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
   <section class="section container reveal" aria-labelledby="research">
     <div class="carousel" data-carousel>
       <div class="section-title carousel__head">
-        <h2 id="research">Research</h2>
+        <h2 id="research">Research topics</h2>
         <div class="carousel__arrows">
           <button type="button" class="carousel__btn" data-prev aria-label="Previous research topics">←</button>
           <button type="button" class="carousel__btn" data-next aria-label="Next research topics">→</button>
@@ -136,7 +136,7 @@ const tutorials = (await getCollection('docs')).filter((d) => d.id.startsWith('t
     const dotsEl = root.querySelector<HTMLElement>('[data-dots]')!;
     const cards = [...track.children] as HTMLElement[];
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const AUTO_MS = 22000; // about two rounds of the animations
+    const AUTO_MS = 12000; // about one round of the animations
 
     const perView = () => Math.max(1, Math.round(track.clientWidth / cards[0].getBoundingClientRect().width));
     const pages = () => Math.ceil(cards.length / perView());

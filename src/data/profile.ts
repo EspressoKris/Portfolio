@@ -3,7 +3,7 @@
 
 export const profile = {
   name: 'Kristian Gurashi',
-  title: 'Dr. Kristian Gurashi, PhD',
+  title: 'Dr Kristian Gurashi',
   role: 'Postdoctoral computational biologist',
   tagline: 'Single-cell & multi-omics · myeloid leukaemia',
   location: 'Oxford, United Kingdom',
@@ -23,15 +23,16 @@ export const intro = {
   ],
 };
 
+// Profile icons (homepage and footer), in this order.
 export const links = [
-  { label: 'Email', href: `mailto:${profile.email}`, icon: 'mail' },
-  { label: 'Google Scholar', href: 'https://scholar.google.com/citations?hl=en&user=X2D8HogAAAAJ', icon: 'scholar' },
-  { label: 'ORCID', href: 'https://orcid.org/0000-0002-5540-3398', icon: 'orcid' },
-  { label: 'GitHub', href: 'https://github.com/EspressoKris', icon: 'github' },
   { label: 'LinkedIn', href: 'https://www.linkedin.com/in/kristiangurashi', icon: 'linkedin' },
-  { label: 'ResearchGate', href: 'https://www.researchgate.net/profile/Kristian-Gurashi', icon: 'researchgate' },
   { label: 'X', href: 'https://twitter.com/krgurashi', icon: 'x' },
+  { label: 'GitHub', href: 'https://github.com/EspressoKris', icon: 'github' },
+  { label: 'Google Scholar', href: 'https://scholar.google.com/citations?hl=en&user=X2D8HogAAAAJ', icon: 'scholar' },
+  { label: 'Email', href: `mailto:${profile.email}`, icon: 'mail' },
 ] as const;
+
+export const orcidUrl = 'https://orcid.org/0000-0002-5540-3398';
 
 export type TimelineItem = { title: string; org: string; dates?: string };
 
@@ -209,7 +210,7 @@ export const awards: TimelineItem[] = [
 ];
 
 // `anim` picks the small animation on each card (see src/components/ResearchAnim.astro).
-export const research: { icon: string; anim: 'clusters' | 'evolution' | 'tree' | 'risk' | 'niche' | 'response'; title: string; text: string }[] = [
+export const research: { icon: string; anim: 'clusters' | 'evolution' | 'tree' | 'risk' | 'niche' | 'response' | 'clones' | 'antibody' | 'pipeline'; title: string; text: string }[] = [
   {
     icon: 'cells',
     anim: 'clusters',
@@ -244,7 +245,25 @@ export const research: { icon: string; anim: 'clusters' | 'evolution' | 'tree' |
     icon: 'tree',
     anim: 'response',
     title: 'Treatment response',
-    text: 'Following how blood cells mature to find gene-activity signatures that predict which patients will respond to a treatment, before it starts.',
+    text: 'Finding gene-activity signatures in patients’ cells that predict, before treatment starts, who will respond: for example, who will no longer need blood transfusions.',
+  },
+  {
+    icon: 'cells',
+    anim: 'clones',
+    title: 'Clones, cell by cell',
+    text: 'Reading DNA and proteins one cell at a time to see which mutations sit together in the same cancer cell, something bulk sequencing cannot show.',
+  },
+  {
+    icon: 'cells',
+    anim: 'antibody',
+    title: 'Antibodies & infection',
+    text: 'Matching immune B cells, and the antibodies they make, to the parts of a virus they recognise, to help discover and design new antibodies.',
+  },
+  {
+    icon: 'tree',
+    anim: 'pipeline',
+    title: 'Reproducible pipelines',
+    text: 'Automated analysis pipelines that take raw sequencing data to results the same way every time, scaled across large computing clusters.',
   },
 ];
 

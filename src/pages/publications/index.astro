@@ -3,7 +3,7 @@ import { getCollection } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import PubCard from '../../components/PubCard.astro';
 import Icon from '../../components/Icon.astro';
-import { links } from '../../data/profile';
+import { links, orcidUrl } from '../../data/profile';
 
 const pubs = (await getCollection('publications')).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 const years = [...new Set(pubs.map((p) => p.data.date.getFullYear()))];
@@ -19,7 +19,7 @@ for (const p of pubs) for (const k of p.data.keywords) {
 }
 const topics = [...counts.entries()].sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0])).slice(0, 10);
 const scholar = links.find((l) => l.label === 'Google Scholar')!.href;
-const orcid = links.find((l) => l.label === 'ORCID')!.href;
+const orcid = orcidUrl;
 ---
 <Base title="Publications" description="Peer-reviewed publications by Kristian Gurashi on CMML, MDS, myelofibrosis and leukaemic stem cells.">
   <div class="container narrow page">
