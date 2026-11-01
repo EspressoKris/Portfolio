@@ -9,8 +9,8 @@
 //   risk      — a risk variant opens up DNA (chromatin peaks) and raises gene activity
 //   niche     — zoom from a tissue section into its cells; dendritic cells signal to stem
 //               cells, then an inhibitor blocks the signal
-//   response  — patients coloured by a signature score sort into transfusion-free vs
-//               still transfused after treatment
+//   response  — cells differentiate; disease cells are disrupted at one stage, giving a
+//               disease-specific signature whose score predicts responders
 //   clones    — bulk gives one blended number; single cells reveal one- vs two-hit clones
 //   antibody  — B cells whose antibodies bind a virus expand; candidates are collected
 //   pipeline  — samples flow through a workflow; steps light up; same result every run
@@ -609,80 +609,105 @@ const { kind } = Astro.props;
     };
   }
 
-  // 6. Treatment response: each patient has a signature score before treatment (low = green,
-  //    high = purple). After treatment, low scorers become transfusion-free; high scorers don't.
+  // 6. Treatment response: (1) cells differentiate from stem cell to red blood cell; disease cells
+  //    are disrupted at one stage; (2) that stage gives a disease-specific gene signature;
+  //    (3) the signature score predicts which patients respond.
   function response(): Scene {
-    const r = rng(53);
-    const mix = (a: string, b: string, k: number) => {
-      const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
-      const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
-      return `rgb(${pa.map((v, i) => Math.round(v + (pb[i] - v) * k)).join(',')})`;
-    };
-    const scoreColor = (s: number) => (s < 0.5 ? mix(C.green, '#a9d39f', s / 0.5) : mix('#d8b5cf', C.purple, (s - 0.5) / 0.5));
-    // 12 patients with scores; low scores (< 0.5) respond
-    const patients = Array.from({ length: 12 }, (_, i) => {
-      const score = clamp01(i < 6 ? 0.12 + r() * 0.3 : 0.58 + r() * 0.32);
-      return { score, order: r(), responds: score < 0.5 };
-    }).sort((a, b) => a.order - b.order);
-    patients.forEach((p, i) => Object.assign(p, { col: i % 3, row: Math.floor(i / 3) }));
-    const P = 10.5, start = 1.0, stagger = 0.42, travel = 0.9;
+    const r = rng(53), g = () => { let u = 0, v = 0; while (!u) u = r(); while (!v) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+    const p0 = [0.07, 0.31], p1 = [0.33, 0.04], p2 = [0.6, 0.38], p3 = [0.93, 0.1];
+    const stage = 0.53; // where disease cells get disrupted
+    const [sx, sy] = bez(p0, p1, p2, p3, stage);
+    const genes = [0.92, 0.2, 0.8, 0.95, 0.3, 0.86, 0.15, 0.72, 0.9, 0.25];
+    const patients = Array.from({ length: 14 }, (_, i) => ({ score: clamp01((i % 2 ? 0.28 : 0.74) + g() * 0.1), order: r() })).sort((a, b) => a.order - b.order);
+    const cut = 0.5;
+    type Mover = { dis: boolean; born: number; dir: number; jit: number };
+    let movers: Mover[] = [];
+    let next = 0;
+    const P = 12.5;
     return {
-      still: 8.4,
+      still: 10.6,
       draw(ctx, w, h, t) {
         const s = t % P;
-        const out = ease(clamp01((s - 9.6) / 0.9));
+        const out = ease(clamp01((s - 11.5) / 1.0));
         const vis = 1 - out;
 
-        // score legend
-        const gx0 = w * 0.06, gx1 = w * 0.34, gy = h * 0.07;
-        label(ctx, 'Signature score', gx0, gy - 1, { size: 8.5, weight: 650 });
-        const gb = ctx.createLinearGradient(gx0, 0, gx1, 0);
-        gb.addColorStop(0, C.green); gb.addColorStop(0.49, '#a9d39f'); gb.addColorStop(0.51, '#d8b5cf'); gb.addColorStop(1, C.purple);
-        ctx.fillStyle = gb; roundRect(ctx, gx0, gy + 7, gx1 - gx0, 5, 2.5); ctx.fill();
-        label(ctx, 'low', gx0, gy + 19, { size: 8 });
-        label(ctx, 'high', gx1, gy + 19, { size: 8, align: 'right' });
+        // (1) differentiation path
+        label(ctx, '1  Differentiation', w * 0.05, h * 0.045, { size: 8.5, weight: 700, color: theme.text });
+        const grad = ctx.createLinearGradient(w * p0[0], 0, w * p3[0], 0);
+        grad.addColorStop(0, C.orange); grad.addColorStop(1, C.red);
+        ctx.strokeStyle = grad; ctx.globalAlpha = 0.22; ctx.lineWidth = Math.max(8, h * 0.045); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(w * p0[0], h * p0[1]); ctx.bezierCurveTo(w * p1[0], h * p1[1], w * p2[0], h * p2[1], w * p3[0], h * p3[1]); ctx.stroke();
+        ctx.globalAlpha = 1;
+        label(ctx, 'Stem cell', w * p0[0], h * (p0[1] + 0.08), { size: 8 });
+        label(ctx, 'Red blood cell', w * p3[0], h * 0.035, { size: 8, align: 'right' });
 
-        // columns: before (left), treatment arrow, outcomes (right)
-        const leftX = w * 0.2, cell = Math.min(w * 0.075, h * 0.1);
-        const gridTop = h * 0.36;
-        label(ctx, 'Before', leftX, h * 0.3, { size: 9, weight: 650, color: theme.text, align: 'center' });
-        const arrowY = h * 0.56;
-        ctx.strokeStyle = theme.border; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(w * 0.36, arrowY); ctx.lineTo(w * 0.52, arrowY); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(w * 0.52, arrowY); ctx.lineTo(w * 0.5, arrowY - 4); ctx.lineTo(w * 0.5, arrowY + 4); ctx.closePath(); ctx.fillStyle = theme.border; ctx.fill();
-        pill(ctx, w * 0.44, arrowY - 12, 'treatment', theme.text, theme.surface, 8);
-
-        const boxes = [
-          { name: 'Transfusion-free', col: C.green, y: h * 0.24, filled: 0 },
-          { name: 'Still transfused', col: C.purple, y: h * 0.6, filled: 0 },
-        ];
-        const bx = w * 0.56, bw = w * 0.4, bh = h * 0.3;
-        for (const b of boxes) {
-          ctx.strokeStyle = b.col; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.7;
-          roundRect(ctx, bx, b.y, bw, bh, 8); ctx.stroke();
-          ctx.globalAlpha = 0.08; ctx.fillStyle = b.col; roundRect(ctx, bx, b.y, bw, bh, 8); ctx.fill();
-          ctx.globalAlpha = 1;
-          label(ctx, b.name, bx + 8, b.y + 10, { size: 8.5, weight: 650, color: b.col });
+        if (!reduced && t >= next) {
+          movers.push({ dis: r() < 0.5, born: t, dir: r() < 0.5 ? -1 : 1, jit: g() });
+          next = t + 0.2 + r() * 0.1;
         }
-
-        const appear = ease(clamp01(s / 0.6)) * vis;
-        patients.forEach((p, i) => {
-          const sx = leftX + ((p as any).col - 1) * cell, sy = gridTop + (p as any).row * cell;
-          const k = reduced ? 1 : ease(clamp01((s - start - i * stagger) / travel));
-          const b = boxes[p.responds ? 0 : 1];
-          const n = b.filled++;
-          const tx = bx + 16 + (n % 6) * (bw - 26) / 5, ty = b.y + bh * 0.62 + (n >= 6 ? 12 : 0);
-          const x = sx + (tx - sx) * k, y = sy + (ty - sy) * k - Math.sin(k * Math.PI) * h * 0.06;
-          if (k < 1 && k > 0) dot(ctx, x, y, 7, scoreColor(p.score), 0.12 * appear);
-          dot(ctx, x, y, Math.max(3.5, cell * 0.28), scoreColor(p.score), appear);
+        movers = movers.filter((m) => {
+          let k = (t - m.born) / 3.4;
+          if (k >= 1) return false;
+          let off = 0;
+          if (m.dis && k > stage - 0.12) {
+            // disease cells slow down, scatter off the path and fade at the disrupted stage
+            const over = k - (stage - 0.12);
+            k = stage - 0.12 + over * 0.35;
+            off = Math.min(1, over * 6) * 0.07 * m.dir * (0.6 + Math.abs(m.jit) * 0.4);
+            if (over > 0.45) return false;
+          }
+          const [x, y] = bez(p0, p1, p2, p3, k);
+          const fade = m.dis && k > stage - 0.12 ? 0.6 : 0.9;
+          dot(ctx, x * w, (y + off) * h, 2.6, m.dis ? C.orange : C.blue, fade * vis);
+          return true;
         });
-        const done = clamp01((s - (start + patients.length * stagger + travel)) / 0.5) * vis;
-        if (done > 0) {
-          ctx.globalAlpha = done;
-          label(ctx, 'Low score → responds', w * 0.06, h * 0.93, { size: 9, weight: 650, color: C.green });
-          label(ctx, 'High score → doesn’t', w * 0.96, h * 0.93, { size: 9, weight: 650, color: C.purple, align: 'right' });
+        const ring = clamp01((s - 1.6) / 0.6) * vis;
+        if (ring > 0) {
+          ctx.strokeStyle = C.orange; ctx.globalAlpha = ring; ctx.lineWidth = 1.3; ctx.setLineDash([3, 3]);
+          ctx.beginPath(); ctx.ellipse(sx * w, sy * h, w * 0.075, h * 0.1, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+          label(ctx, 'disrupted stage', sx * w, (sy + 0.15) * h, { size: 8, align: 'center', color: C.orange, weight: 650 });
           ctx.globalAlpha = 1;
         }
+        // legend
+        dot(ctx, w * 0.68, h * 0.47, 3, C.blue, 1); label(ctx, 'healthy', w * 0.68 + 7, h * 0.47, { size: 8 });
+        dot(ctx, w * 0.84, h * 0.47, 3, C.orange, 1); label(ctx, 'disease', w * 0.84 + 7, h * 0.47, { size: 8 });
+
+        // (2) disease-specific signature
+        const sigY = h * 0.6;
+        label(ctx, '2  Disease signature', w * 0.05, sigY, { size: 8.5, weight: 700, color: theme.text });
+        const tx0 = w * 0.42, tx1 = w * 0.95, tw = (tx1 - tx0) / genes.length, th = Math.max(9, h * 0.06);
+        genes.forEach((v, i) => {
+          const on = clamp01((s - 3.4 - i * 0.14) / 0.3) * vis;
+          ctx.fillStyle = theme.border; ctx.globalAlpha = 0.5; roundRect(ctx, tx0 + i * tw + 1, sigY - th / 2, tw - 2, th, 2); ctx.fill();
+          ctx.fillStyle = C.orange; ctx.globalAlpha = on * (0.15 + 0.85 * v); roundRect(ctx, tx0 + i * tw + 1, sigY - th / 2, tw - 2, th, 2); ctx.fill();
+          ctx.globalAlpha = 1;
+        });
+        const link = clamp01((s - 2.6) / 0.6) * vis;
+        if (link > 0) {
+          ctx.strokeStyle = C.orange; ctx.globalAlpha = 0.5 * link; ctx.setLineDash([2, 3]); ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(sx * w, (sy + 0.19) * h); ctx.lineTo((tx0 + tx1) / 2, sigY - th / 2 - 3); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+        }
+
+        // (3) predict response from the signature score
+        const ay = h * 0.86, ax0 = w * 0.42, ax1 = w * 0.95;
+        label(ctx, '3  Predict response', w * 0.05, ay, { size: 8.5, weight: 700, color: theme.text });
+        ctx.strokeStyle = theme.border; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(ax0, ay); ctx.lineTo(ax1, ay); ctx.stroke();
+        label(ctx, 'signature score →', ax1, ay + 10, { size: 7.5, align: 'right' });
+        const cutA = clamp01((s - 5.6) / 0.5) * vis;
+        if (cutA > 0) {
+          const cx = ax0 + cut * (ax1 - ax0);
+          ctx.strokeStyle = theme.text; ctx.globalAlpha = 0.5 * cutA; ctx.setLineDash([3, 3]);
+          ctx.beginPath(); ctx.moveTo(cx, ay - h * 0.11); ctx.lineTo(cx, ay + 4); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = cutA;
+          label(ctx, 'responds', cx - 5, ay - h * 0.09, { size: 8, align: 'right', color: C.green, weight: 650 });
+          label(ctx, 'doesn’t', cx + 5, ay - h * 0.09, { size: 8, color: C.purple, weight: 650 });
+          ctx.globalAlpha = 1;
+        }
+        patients.forEach((p, i) => {
+          const k = reduced ? 1 : ease(clamp01((s - 6.0 - i * 0.3) / 0.5));
+          if (k <= 0) return;
+          const x = ax0 + p.score * (ax1 - ax0), y = ay - h * 0.1 * (1 - k) - 4;
+          dot(ctx, x, y, 3.4, p.score < cut ? C.green : C.purple, k * vis);
+        });
       },
     };
   }

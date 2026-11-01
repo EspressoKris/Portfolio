@@ -245,7 +245,7 @@ export const research: { icon: string; anim: 'clusters' | 'evolution' | 'tree' |
     icon: 'tree',
     anim: 'response',
     title: 'Treatment response',
-    text: 'Finding gene-activity signatures in patients’ cells that predict, before treatment starts, who will respond: for example, who will no longer need blood transfusions.',
+    text: 'Following how blood cells mature (differentiate) to pinpoint the gene-activity signature unique to the disease, then using it to predict which patients will respond to treatment.',
   },
   {
     icon: 'cells',
