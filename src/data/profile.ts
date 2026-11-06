@@ -1,5 +1,5 @@
-import phdPhoto from '../assets/career/phd-manchester.jpg';
-import kclPhoto from '../assets/career/kcl-lab.jpg';
+import phdPhoto from '../assets/career/phd-ash2022.jpg';
+// Not shown at the moment: import kclPhoto from '../assets/career/kcl-lab.jpg';
 import oxfordPhoto from '../assets/career/oxford-group.jpg';
 
 // Everything about you that appears around the site.
@@ -138,7 +138,7 @@ export const experience: ExperienceItem[] = [
     place: 'University of Manchester',
     dates: 'Jan 2019 – Oct 2023',
     photo: phdPhoto,
-    photoAlt: 'Kristian at his desk at the Cancer Research UK Manchester Institute during his PhD',
+    photoAlt: 'Kristian presenting at the 64th American Society of Hematology Annual Meeting',
     summary:
       'Mostly lab-based, I also generated and analysed single-cell and bulk data on chronic myelomonocytic leukaemia (CMML), a blood cancer that can turn into aggressive acute leukaemia.',
     highlights: [
@@ -190,8 +190,6 @@ export const experience: ExperienceItem[] = [
     org: 'Randall Centre for Cell & Molecular Biophysics',
     place: "King's College London",
     dates: 'Jan 2018 – Jan 2019',
-    photo: kclPhoto,
-    photoAlt: "Kristian in a lab coat during his time as a research associate at King's College London",
     summary:
       'My MRes project, continued as a research assistant: mostly lab work, with my first steps in computational analysis.',
     highlights: [
